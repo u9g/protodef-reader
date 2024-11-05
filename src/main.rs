@@ -219,25 +219,19 @@ fn print_ty(ty: &Ty) -> String {
         Ty::Switch { switch } => {
             if switch.fields.len() > 0 {
                 format!(
-                    "{} : {}",
-                    // switch.compare_to,
+                    "{{ {}; _: {} }} /* .get({}) */",
                     switch
                         .fields
                         .iter()
-                        .map(|x| format!(
-                            "\"{}\" extends \"{}\" ? {} {}",
-                            switch.compare_to,
-                            x.0,
-                            print_ty(&x.1),
-                            if switch.fields.len() > 1 { "/* */" } else { "" }
-                        ))
+                        .map(|x| format!("{}: {}", x.0, print_ty(&x.1)))
                         .collect::<Vec<_>>()
-                        .join(" : "),
+                        .join(" ;"),
                     switch
                         .default
                         .as_ref()
                         .map(|x| print_ty(&x))
-                        .unwrap_or_else(|| "void".to_string())
+                        .unwrap_or_else(|| "void".to_string()),
+                    switch.compare_to
                 )
             } else {
                 format!("/* empty switch */ any")
