@@ -110,7 +110,7 @@ enum HashCountType {
     Fixed(String),
 }
 
-const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = true;
+const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = false;
 
 #[derive(Debug, Clone)]
 enum Ty {
@@ -205,23 +205,30 @@ fn print_ty(ty: &Ty) -> String {
                 format!(", {}", value)
             }
         }),
-        Ty::BitField { fields } => format!(
-            "BitField<{{ fields: [{}] }}>",
-            fields
-                .iter()
-                .map(|x| format!(
-                    "{{ name: \"{}\", size: {}, signed: {} }}",
-                    x.name, x.size, x.signed
-                ))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
+        Ty::BitField { fields } => {
+            let mut fields = fields.iter().collect::<Vec<_>>();
+            fields.sort_by_key(|x| x.name.clone());
+
+            format!(
+                "BitField<{{ fields: [{}] }}>",
+                fields
+                    .iter()
+                    .map(|x| format!(
+                        "{{ name: \"{}\", size: {}, signed: {} }}",
+                        x.name, x.size, x.signed
+                    ))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
         Ty::Switch { switch } => {
             if switch.fields.len() > 0 {
+                let mut fields = switch.fields.iter().collect::<Vec<_>>();
+                fields.sort_by_key(|x| x.0.clone());
+
                 format!(
                     "{{ {}; _: {} }} /* .get({}) */",
-                    switch
-                        .fields
+                    fields
                         .iter()
                         .map(|x| format!("{}: {}", x.0, print_ty(&x.1)))
                         .collect::<Vec<_>>()
@@ -239,10 +246,12 @@ fn print_ty(ty: &Ty) -> String {
         }
         Ty::Mapper { mapper } => {
             if mapper.mappings.len() > 0 {
+                let mut mappings = mapper.mappings.iter().collect::<Vec<_>>();
+                mappings.sort_by_key(|x| x.0.clone());
+
                 format!(
                     "{{ {}; _ : Void; }}[{}] /* mapper */",
-                    mapper
-                        .mappings
+                    mappings
                         .iter()
                         .map(|x| format!("{}: \"{}\"", x.0, x.1))
                         .collect::<Vec<_>>()
@@ -260,22 +269,42 @@ fn print_ty(ty: &Ty) -> String {
                 format!("/* empty mapper */ any")
             }
         }
-        Ty::Container { ty } => format!(
-            "{{ {} }}",
-            ty.fields
-                .iter()
-                .map(|x| match x {
-                    TypeInContainer::Named(type_with_name) => {
-                        format!("{}: {}", type_with_name.name, print_ty(&type_with_name.ty))
-                    }
-                    TypeInContainer::Anonymous(anonymous_type) => {
-                        assert!(anonymous_type.anon);
-                        format!("_anon: {}", print_ty(&anonymous_type.ty))
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
+        Ty::Container { ty } => {
+            let mut fields = ty.fields.iter().collect::<Vec<_>>();
+            fields.sort_by(|x, y| {
+                // if both are named, sort by name
+                // if one is anonymous, anonymous comes last
+                // if both are anonymous, they are considered equal
+                if let (TypeInContainer::Named(x), TypeInContainer::Named(y)) = (x, y) {
+                    x.name.cmp(&y.name)
+                } else if let (TypeInContainer::Anonymous(_), TypeInContainer::Anonymous(_)) =
+                    (x, y)
+                {
+                    std::cmp::Ordering::Equal
+                } else if let TypeInContainer::Anonymous(_) = x {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                }
+            });
+
+            format!(
+                "{{ {} }}",
+                fields
+                    .iter()
+                    .map(|x| match x {
+                        TypeInContainer::Named(type_with_name) => {
+                            format!("{}: {}", type_with_name.name, print_ty(&type_with_name.ty))
+                        }
+                        TypeInContainer::Anonymous(anonymous_type) => {
+                            assert!(anonymous_type.anon);
+                            format!("_anon: {}", print_ty(&anonymous_type.ty))
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
         Ty::NonNativeType(s) => format!("{s}"),
         Ty::Array { ty } => match ty {
             ArrayType::FixedSize(fixed_array_type) => format!(
@@ -495,7 +524,16 @@ fn main() -> anyhow::Result<()> {
     // handshaking
 
     writeln!(file, "namespace handshaking.to_client {{")?;
-    for (name, mut ty) in p.handshaking.to_client.types {
+    let mut packets = p
+        .handshaking
+        .to_client
+        .types
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -503,7 +541,16 @@ fn main() -> anyhow::Result<()> {
     writeln!(file, "}}")?;
 
     writeln!(file, "namespace handshaking.to_server {{")?;
-    for (name, mut ty) in p.handshaking.to_server.types {
+    let mut packets = p
+        .handshaking
+        .to_server
+        .types
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -513,7 +560,11 @@ fn main() -> anyhow::Result<()> {
     // status
 
     writeln!(file, "namespace status.to_client {{")?;
-    for (name, mut ty) in p.status.to_client.types {
+    let mut packets = p.status.to_client.types.into_iter().collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -521,7 +572,11 @@ fn main() -> anyhow::Result<()> {
     writeln!(file, "}}")?;
 
     writeln!(file, "namespace status.to_server {{")?;
-    for (name, mut ty) in p.status.to_server.types {
+    let mut packets = p.status.to_server.types.into_iter().collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -531,7 +586,11 @@ fn main() -> anyhow::Result<()> {
     // login
 
     writeln!(file, "namespace login.to_client {{")?;
-    for (name, mut ty) in p.login.to_client.types {
+    let mut packets = p.login.to_client.types.into_iter().collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -539,7 +598,11 @@ fn main() -> anyhow::Result<()> {
     writeln!(file, "}}")?;
 
     writeln!(file, "namespace login.to_server {{")?;
-    for (name, mut ty) in p.login.to_server.types {
+    let mut packets = p.login.to_server.types.into_iter().collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -549,7 +612,11 @@ fn main() -> anyhow::Result<()> {
     // play
 
     writeln!(file, "namespace play.to_client {{")?;
-    for (name, mut ty) in p.play.to_client.types {
+    let mut packets = p.play.to_client.types.into_iter().collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
@@ -557,7 +624,11 @@ fn main() -> anyhow::Result<()> {
     writeln!(file, "}}")?;
 
     writeln!(file, "namespace play.to_server {{")?;
-    for (name, mut ty) in p.play.to_server.types {
+    let mut packets = p.play.to_server.types.into_iter().collect::<Vec<_>>();
+
+    packets.sort_by_key(|x| x.0.clone());
+
+    for (name, mut ty) in packets {
         walk_ty(&mut ty);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
