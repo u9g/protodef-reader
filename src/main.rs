@@ -110,7 +110,7 @@ enum HashCountType {
     Fixed(String),
 }
 
-const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = false;
+const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = true;
 
 #[derive(Debug, Clone)]
 enum Ty {
@@ -240,17 +240,21 @@ fn print_ty(ty: &Ty) -> String {
         Ty::Mapper { mapper } => {
             if mapper.mappings.len() > 0 {
                 format!(
-                    "{} : Void",
-                    // switch.compare_to,
+                    "{{ {}; _ : Void; }}[{}] /* mapper */",
                     mapper
                         .mappings
                         .iter()
-                        .map(|x| format!(
-                            "this extends \"{}\" ? \"{}\" /* mapper of varint */",
-                            x.0, x.1
-                        ))
+                        .map(|x| format!("{}: \"{}\"", x.0, x.1))
                         .collect::<Vec<_>>()
-                        .join(" : ")
+                        .join("; "),
+                    {
+                        let v = print_ty(&mapper.ty);
+                        if !VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE && v == "VarInt" {
+                            "".to_string()
+                        } else {
+                            format!("{}", v)
+                        }
+                    }
                 )
             } else {
                 format!("/* empty mapper */ any")
