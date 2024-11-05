@@ -224,7 +224,7 @@ fn print_ty(ty: &Ty) -> String {
         Ty::Switch { switch } => {
             if switch.fields.len() > 0 {
                 let mut fields = switch.fields.iter().collect::<Vec<_>>();
-                fields.sort_by_key(|x| x.0.clone());
+                fields.sort_by_key(|x| x.0.as_str());
 
                 format!(
                     "{{ {}; _: {} }} /* .get({}) */",
