@@ -8,6 +8,29 @@ mod array_to_map_transform;
 mod de;
 mod walk;
 
+#[cfg(test)]
+mod test {
+    use std::fs;
+
+    use anyhow::Context;
+    use insta::{assert_snapshot, glob};
+
+    use crate::Protocol;
+
+    #[test]
+    fn test_parsing_protocol_files() {
+        glob!("inputs/*.json", |path| {
+            let input = fs::read_to_string(path).unwrap();
+
+            let p: Protocol = serde_json::from_str(&input)
+                .context("failed to parse protocol.json file")
+                .unwrap();
+
+            assert_snapshot!(format!("{:?}", p));
+        });
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct Protocol {
     handshaking: BiDirectionalPackets,
