@@ -1,10 +1,12 @@
 use anyhow::Context;
 use serde::Deserialize;
 use std::io::Write;
-use std::mem;
 use std::{collections::HashMap, fs::OpenOptions};
+use walk::walk_ty;
 
+mod array_to_map_transform;
 mod de;
+mod walk;
 
 #[derive(Debug, Deserialize)]
 struct Protocol {
@@ -27,33 +29,33 @@ struct TypeHolder {
     types: HashMap<String, Ty>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContainerType {
     fields: Vec<TypeInContainer>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 #[serde(untagged)]
 enum TypeInContainer {
     Named(TypeWithName),
     Anonymous(AnonymousType),
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum ArrayType {
     FixedSize(FixedArrayType),
     VariableSize(VariableArrayType),
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct FixedArrayType {
     count: u8,
     #[serde(rename = "type")]
     ty: Box<Ty>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct VariableArrayType {
     #[serde(rename = "countType")]
     count_type: Box<Ty>,
@@ -61,28 +63,28 @@ pub struct VariableArrayType {
     ty: Box<Ty>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 struct TypeWithName {
     name: String,
     #[serde(rename = "type")]
     ty: Ty,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 struct AnonymousType {
     #[serde(rename = "type")]
     ty: Ty,
     anon: bool,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 struct BitFieldType {
     name: String,
     size: u8,
     signed: bool,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 struct SwitchType {
     #[serde(rename = "compareTo")]
     compare_to: String,
@@ -90,13 +92,13 @@ struct SwitchType {
     default: Option<Box<Ty>>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 struct BufferType {
     #[serde(rename = "countType")]
     count_type: Box<Ty>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 struct MapperType {
     #[serde(rename = "type")]
     ty: Box<Ty>,
@@ -104,7 +106,7 @@ struct MapperType {
     mappings: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum HashCountType {
     Typed(Box<Ty>),
     Fixed(u8),
@@ -112,7 +114,7 @@ enum HashCountType {
 
 const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = false;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Ty {
     VarInt,
     F64,
@@ -380,14 +382,13 @@ type Buffer<T> = never;
 type Record_<K, V, Size = VarInt> = never;
 "#;
 
-// changes all arrays with varint countType and values of compound {key, value} to Map<key, value>
-fn walk_ty(top_lvl_ty: &mut Ty) {
+fn do_array_to_map_transform(top_lvl_ty: &mut Ty) {
     match top_lvl_ty {
         Ty::Array { ty } => {
             let (count_type, ty) = match ty {
                 ArrayType::VariableSize(VariableArrayType { count_type, ty }) => {
                     let mut count_type = count_type.clone();
-                    walk_ty(&mut count_type);
+                    walk_ty(&mut count_type, do_array_to_map_transform);
                     (HashCountType::Typed(count_type), ty)
                 }
                 ArrayType::FixedSize(FixedArrayType { count, ty }) => {
@@ -407,8 +408,8 @@ fn walk_ty(top_lvl_ty: &mut Ty) {
                         ) if name == "key" && name2 == "value" => {
                             let mut ty = ty.clone();
                             let mut ty2 = ty2.clone();
-                            walk_ty(&mut ty);
-                            walk_ty(&mut ty2);
+                            walk_ty(&mut ty, do_array_to_map_transform);
+                            walk_ty(&mut ty2, do_array_to_map_transform);
                             *top_lvl_ty = Ty::Map {
                                 key: Box::new(ty),
                                 value: Box::new(ty2),
@@ -424,8 +425,8 @@ fn walk_ty(top_lvl_ty: &mut Ty) {
                         ) if name2 == "key" && name == "value" => {
                             let mut ty2 = ty2.clone();
                             let mut ty = ty.clone();
-                            walk_ty(&mut ty2);
-                            walk_ty(&mut ty);
+                            walk_ty(&mut ty2, do_array_to_map_transform);
+                            walk_ty(&mut ty, do_array_to_map_transform);
                             *top_lvl_ty = Ty::Map {
                                 key: Box::new(ty2),
                                 value: Box::new(ty),
@@ -437,78 +438,11 @@ fn walk_ty(top_lvl_ty: &mut Ty) {
                 }
             }
         }
-        Ty::VarInt
-        | Ty::F64
-        | Ty::I16
-        | Ty::I8
-        | Ty::I32
-        | Ty::UUID
-        | Ty::EntityMetadata
-        | Ty::String
-        | Ty::Position
-        | Ty::U8
-        | Ty::Bool
-        | Ty::Slot
-        | Ty::F32
-        | Ty::Void
-        | Ty::I64
-        | Ty::OptionalNbt
-        | Ty::RestBuffer
-        | Ty::Nbt
-        | Ty::VarLong
-        | Ty::NonNativeType(_)
-        | Ty::BitField { .. }
-        | Ty::U16 => {}
-        Ty::Array { ty } => match ty {
-            ArrayType::FixedSize(fixed_array_type) => {
-                walk_ty(&mut fixed_array_type.ty);
-            }
-            ArrayType::VariableSize(variable_array_type) => {
-                walk_ty(&mut variable_array_type.count_type);
-                walk_ty(&mut variable_array_type.ty);
-            }
-        },
-        Ty::Option { ty } => walk_ty(ty.as_mut()),
-        Ty::Buffer { ty } => walk_ty(&mut ty.count_type),
-        Ty::Switch { switch } => {
-            if let Some(default) = &mut switch.default {
-                walk_ty(default);
-            }
-
-            for (_, field) in switch.fields.iter_mut() {
-                walk_ty(field);
-            }
-        }
-        Ty::Container { ty } => {
-            for field in ty.fields.iter_mut() {
-                match field {
-                    TypeInContainer::Named(type_with_name) => {
-                        walk_ty(&mut type_with_name.ty);
-                    }
-                    TypeInContainer::Anonymous(anonymous_type) => {
-                        assert!(anonymous_type.anon);
-                        walk_ty(&mut anonymous_type.ty);
-                    }
-                }
-            }
-        }
-        Ty::Mapper { mapper } => {
-            walk_ty(&mut mapper.ty);
-        }
-        Ty::Map {
-            key,
-            value,
-            count_type,
-        } => {
-            walk_ty(key);
-            walk_ty(value);
-            match count_type {
-                HashCountType::Typed(ty) => walk_ty(ty),
-                HashCountType::Fixed(_) => {}
-            }
-        }
+        _ => {}
     }
 }
+
+// changes all arrays with varint countType and values of compound {key, value} to Map<key, value>
 
 fn main() -> anyhow::Result<()> {
     let protocol_txt = include_str!("protocol.json");
@@ -539,7 +473,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -556,7 +490,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -570,7 +504,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -582,7 +516,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -596,7 +530,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -608,7 +542,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -622,7 +556,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
@@ -634,7 +568,7 @@ fn main() -> anyhow::Result<()> {
     packets.sort_by_key(|x| x.0.clone());
 
     for (name, mut ty) in packets {
-        walk_ty(&mut ty);
+        walk_ty(&mut ty, do_array_to_map_transform);
         let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
         writeln!(file, "{intf}")?;
     }
