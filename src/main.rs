@@ -107,7 +107,7 @@ struct MapperType {
 #[derive(Debug, Clone)]
 enum HashCountType {
     Typed(Box<Ty>),
-    Fixed(String),
+    Fixed(u8),
 }
 
 const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = false;
@@ -383,10 +383,18 @@ type Record_<K, V, Size = VarInt> = never;
 // changes all arrays with varint countType and values of compound {key, value} to Map<key, value>
 fn walk_ty(top_lvl_ty: &mut Ty) {
     match top_lvl_ty {
-        Ty::Array {
-            // TODO: Check non-variable size arrays too!
-            ty: ArrayType::VariableSize(VariableArrayType { count_type, ty }),
-        } => {
+        Ty::Array { ty } => {
+            let (count_type, ty) = match ty {
+                ArrayType::VariableSize(VariableArrayType { count_type, ty }) => {
+                    let mut count_type = count_type.clone();
+                    walk_ty(&mut count_type);
+                    (HashCountType::Typed(count_type), ty)
+                }
+                ArrayType::FixedSize(FixedArrayType { count, ty }) => {
+                    (HashCountType::Fixed(*count), ty)
+                }
+            };
+
             if let Ty::Container { ref mut ty } = ty.as_mut() {
                 if ty.fields.len() == 2 {
                     match (ty.fields.get(0), ty.fields.get(1)) {
@@ -399,14 +407,12 @@ fn walk_ty(top_lvl_ty: &mut Ty) {
                         ) if name == "key" && name2 == "value" => {
                             let mut ty = ty.clone();
                             let mut ty2 = ty2.clone();
-                            let mut count_type = count_type.clone();
                             walk_ty(&mut ty);
                             walk_ty(&mut ty2);
-                            walk_ty(&mut count_type);
                             *top_lvl_ty = Ty::Map {
                                 key: Box::new(ty),
                                 value: Box::new(ty2),
-                                count_type: HashCountType::Typed(count_type),
+                                count_type,
                             };
                         }
                         (
@@ -418,14 +424,12 @@ fn walk_ty(top_lvl_ty: &mut Ty) {
                         ) if name2 == "key" && name == "value" => {
                             let mut ty2 = ty2.clone();
                             let mut ty = ty.clone();
-                            let mut count_type = count_type.clone();
                             walk_ty(&mut ty2);
                             walk_ty(&mut ty);
-                            walk_ty(&mut count_type);
                             *top_lvl_ty = Ty::Map {
                                 key: Box::new(ty2),
                                 value: Box::new(ty),
-                                count_type: HashCountType::Typed(count_type),
+                                count_type,
                             };
                         }
                         _ => {}
@@ -508,7 +512,8 @@ fn walk_ty(top_lvl_ty: &mut Ty) {
 
 fn main() -> anyhow::Result<()> {
     let protocol_txt = include_str!("protocol.json");
-    let mut p: Protocol =
+
+    let p: Protocol =
         serde_json::from_str(protocol_txt).context("failed to parse protocol.json file")?;
 
     std::fs::remove_file("protocol.ts")?;
