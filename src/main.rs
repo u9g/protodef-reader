@@ -1,4 +1,5 @@
 use anyhow::Context;
+use array_to_map_transform::do_array_to_map_transform;
 use serde::Deserialize;
 use std::io::Write;
 use std::{collections::HashMap, fs::OpenOptions};
@@ -24,7 +25,7 @@ mod test {
 
             let p: Protocol = serde_json::from_str(&input)
                 .context("failed to parse protocol.json file")
-                .unwrap();
+                .unwrap_or_else(|e| panic!("{e:#?}, failed to parse protocol.json file: {path:?}"));
 
             assert_snapshot!(format!("{:?}", p));
         });
@@ -33,9 +34,11 @@ mod test {
 
 #[derive(Debug, Deserialize)]
 struct Protocol {
+    types: HashMap<String, Ty>,
     handshaking: BiDirectionalPackets,
     status: BiDirectionalPackets,
     login: BiDirectionalPackets,
+    configuration: Option<BiDirectionalPackets>,
     play: BiDirectionalPackets,
 }
 
@@ -69,11 +72,20 @@ enum TypeInContainer {
 pub enum ArrayType {
     FixedSize(FixedArrayType),
     VariableSize(VariableArrayType),
+    ReferencedLength(ExplicitReferencedLengthType),
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+pub struct ExplicitReferencedLengthType {
+    #[serde(rename = "count")]
+    referenced_length: String,
+    #[serde(rename = "type")]
+    ty: Box<Ty>,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct FixedArrayType {
-    count: u8,
+    count: u32,
     #[serde(rename = "type")]
     ty: Box<Ty>,
 }
@@ -116,9 +128,15 @@ struct SwitchType {
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
-struct BufferType {
-    #[serde(rename = "countType")]
-    count_type: Box<Ty>,
+#[serde(untagged)]
+enum BufferType {
+    Typed {
+        #[serde(rename = "countType")]
+        count_type: Box<Ty>,
+    },
+    Fixed {
+        count: u32,
+    },
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
@@ -132,7 +150,22 @@ struct MapperType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum HashCountType {
     Typed(Box<Ty>),
-    Fixed(u8),
+    Fixed(u32),
+    ReferencedLength(String),
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+struct EntityMetadataLoopType {
+    #[serde(rename = "endVal")]
+    end_val: u32,
+    #[serde(rename = "type")]
+    ty: Box<Ty>,
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+struct EntityMetadataItemType {
+    #[serde(rename = "compareTo")]
+    compare_to: String,
 }
 
 const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = false;
@@ -159,7 +192,27 @@ enum Ty {
     Nbt,
     VarLong,
     U16,
+    AnonymousNbt,
+    EntityMetadataItem {
+        ty: EntityMetadataItemType,
+    },
+
+    // todo: add arguments
+    ArrayWithLengthOffset,
+    EntityMetadataLoop {
+        ty: EntityMetadataLoopType,
+    },
+
+    NativeType,
     NonNativeType(String),
+
+    TopBitSetTerminatedArray {
+        ty: Box<Ty>,
+    },
+
+    PString {
+        count_type: Box<Ty>,
+    },
     Option {
         ty: Box<Ty>,
     },
@@ -191,7 +244,7 @@ enum Ty {
 }
 
 // TODO: VarInt as a Hashmap Size or an Array Key is elided from the output
-fn print_ty(ty: &Ty) -> String {
+fn print_ty(ty: &Ty, anon: &mut u32) -> String {
     match ty {
         Ty::VarInt => "VarInt".to_string(),
         Ty::F64 => "f64".to_string(),
@@ -199,9 +252,9 @@ fn print_ty(ty: &Ty) -> String {
         Ty::I8 => "i8".to_string(),
         Ty::I32 => "i32".to_string(),
         Ty::UUID => "UUID".to_string(),
-        Ty::EntityMetadata => "EntityMetadata".to_string(),
+        Ty::EntityMetadata => "entityMetadata".to_string(),
         Ty::String => "string".to_string(),
-        Ty::Position => "Position".to_string(),
+        Ty::Position => "position".to_string(),
         Ty::U8 => "u8".to_string(),
         Ty::Bool => "bool".to_string(),
         Ty::Slot => "Slot".to_string(),
@@ -213,23 +266,31 @@ fn print_ty(ty: &Ty) -> String {
         Ty::Nbt => "Nbt".to_string(),
         Ty::VarLong => "VarLong".to_string(),
         Ty::U16 => "u16".to_string(),
-        Ty::Option { ty } => format!("Option<{}>", print_ty(ty)),
+        Ty::Option { ty } => format!("Option<{}>", print_ty(ty, anon)),
         Ty::Map {
             key,
             value,
             count_type,
-        } => format!("Record_<{}, {}{}>", print_ty(key), print_ty(value), {
-            let value = match count_type {
-                HashCountType::Typed(ty) => format!("{}", print_ty(ty.as_ref())),
-                HashCountType::Fixed(s) => format!("{}", s),
-            };
+        } => format!(
+            "Record_<{}, {}{}>",
+            print_ty(key, anon),
+            print_ty(value, anon),
+            {
+                let value = match count_type {
+                    HashCountType::Typed(ty) => format!("{}", print_ty(ty.as_ref(), anon)),
+                    HashCountType::Fixed(s) => format!("{}", s),
+                    HashCountType::ReferencedLength(referenced_length) => {
+                        format!("\"{}\"", referenced_length)
+                    }
+                };
 
-            if !VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE && value == "VarInt" {
-                "".to_string()
-            } else {
-                format!(", {}", value)
+                if !VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE && value == "VarInt" {
+                    "".to_string()
+                } else {
+                    format!(", {}", value)
+                }
             }
-        }),
+        ),
         Ty::BitField { fields } => {
             let mut fields = fields.iter().collect::<Vec<_>>();
             fields.sort_by_key(|x| x.name.clone());
@@ -255,13 +316,13 @@ fn print_ty(ty: &Ty) -> String {
                     "{{ {}; _: {} }} /* .get({}) */",
                     fields
                         .iter()
-                        .map(|x| format!("{}: {}", x.0, print_ty(&x.1)))
+                        .map(|x| format!("\"{}\": {}", x.0, print_ty(&x.1, anon)))
                         .collect::<Vec<_>>()
                         .join(" ;"),
                     switch
                         .default
                         .as_ref()
-                        .map(|x| print_ty(&x))
+                        .map(|x| print_ty(x, anon))
                         .unwrap_or_else(|| "void".to_string()),
                     switch.compare_to
                 )
@@ -282,7 +343,7 @@ fn print_ty(ty: &Ty) -> String {
                         .collect::<Vec<_>>()
                         .join("; "),
                     {
-                        let v = print_ty(&mapper.ty);
+                        let v = print_ty(&mapper.ty, anon);
                         if !VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE && v == "VarInt" {
                             "".to_string()
                         } else {
@@ -319,11 +380,17 @@ fn print_ty(ty: &Ty) -> String {
                     .iter()
                     .map(|x| match x {
                         TypeInContainer::Named(type_with_name) => {
-                            format!("{}: {}", type_with_name.name, print_ty(&type_with_name.ty))
+                            format!(
+                                "{}: {}",
+                                type_with_name.name,
+                                print_ty(&type_with_name.ty, anon)
+                            )
                         }
                         TypeInContainer::Anonymous(anonymous_type) => {
                             assert!(anonymous_type.anon);
-                            format!("_anon: {}", print_ty(&anonymous_type.ty))
+                            let used_anon = *anon;
+                            *anon += 1;
+                            format!("_anon_{used_anon}: {}", print_ty(&anonymous_type.ty, anon))
                         }
                     })
                     .collect::<Vec<_>>()
@@ -331,15 +398,16 @@ fn print_ty(ty: &Ty) -> String {
             )
         }
         Ty::NonNativeType(s) => format!("{s}"),
+        Ty::NativeType => "never /* native */".to_string(),
         Ty::Array { ty } => match ty {
             ArrayType::FixedSize(fixed_array_type) => format!(
                 "Arr<{{ arraySize: {}, elementType: {} }}>",
                 fixed_array_type.count,
-                print_ty(&fixed_array_type.ty)
+                print_ty(&fixed_array_type.ty, anon)
             ),
             ArrayType::VariableSize(variable_array_type) => {
-                format!("{}[{}]", print_ty(&variable_array_type.ty), {
-                    let v = print_ty(&variable_array_type.count_type);
+                format!("{}[{}]", print_ty(&variable_array_type.ty, anon), {
+                    let v = print_ty(&variable_array_type.count_type, anon);
                     if !VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE && v == "VarInt" {
                         "".to_string()
                     } else {
@@ -347,15 +415,53 @@ fn print_ty(ty: &Ty) -> String {
                     }
                 })
             }
+            ArrayType::ReferencedLength(explicit_referenced_length_type) => {
+                format!(
+                    "Arr<{{ referencedLength: \"{}\", elementType: {} }}>",
+                    explicit_referenced_length_type.referenced_length,
+                    print_ty(&explicit_referenced_length_type.ty, anon)
+                )
+            }
         },
-        Ty::Buffer { ty } => format!("Buffer<{{ countType: {} }}>", print_ty(&ty.count_type)),
+        Ty::Buffer { ty } => match ty {
+            BufferType::Typed { count_type } => {
+                format!("Buffer<{{ countType: {} }}>", print_ty(count_type, anon))
+            }
+            BufferType::Fixed { count } => format!("Buffer<{{ count: {} }}>", count),
+        },
+        Ty::AnonymousNbt => "anonymousNbt".to_string(),
+        Ty::ArrayWithLengthOffset => "arrayWithLengthOffset".to_string(),
+        Ty::PString { count_type } => {
+            format!("PString<{{ countType: {} }}>", print_ty(count_type, anon))
+        }
+        Ty::EntityMetadataLoop { ty } => {
+            format!(
+                "entityMetadataLoop<{{ ty: {}, endVal: {} }}>",
+                print_ty(&ty.ty, anon),
+                ty.end_val
+            )
+        }
+        Ty::TopBitSetTerminatedArray { ty } => {
+            format!("topBitSetTerminatedArray<{{ ty: {} }}>", print_ty(ty, anon))
+        }
+        Ty::EntityMetadataItem { ty } => {
+            format!("entityMetadataItem<{{ compareTo: \"{}\" }}>", ty.compare_to)
+        }
     }
 }
 
-fn print_multiline_block(ty: &Ty) -> String {
-    let Ty::Container { ty } = ty else {
-        panic!("print_multiline_block got a ty that isn't a block.")
+fn print_multiline_block(ty: &Ty, anon: &mut u32) -> String {
+    if let Ty::Mapper { .. } = ty {
+        return print_ty(ty, anon);
+    }
+
+    let Ty::Container { ty } = &ty else {
+        panic!(
+            "print_multiline_block got a ty that isn't a block. {:?}",
+            ty
+        );
     };
+
     format!(
         "{{\n{}\n}}",
         ty.fields
@@ -365,12 +471,17 @@ fn print_multiline_block(ty: &Ty) -> String {
                     format!(
                         "\t{}: {},",
                         type_with_name.name,
-                        print_ty(&type_with_name.ty)
+                        print_ty(&type_with_name.ty, anon)
                     )
                 }
                 TypeInContainer::Anonymous(anonymous_type) => {
                     assert!(anonymous_type.anon);
-                    format!("\t_anon: {}", print_ty(&anonymous_type.ty))
+                    let used_anon = *anon;
+                    *anon += 1;
+                    format!(
+                        "\t_anon_{used_anon}: {}",
+                        print_ty(&anonymous_type.ty, anon)
+                    )
                 }
             })
             .collect::<Vec<_>>()
@@ -380,90 +491,30 @@ fn print_multiline_block(ty: &Ty) -> String {
 
 const PRELUDE: &str = r#"
 type VarInt = never;
-type f64 = never;
-type i16 = never;
-type i8 = never;
-type i32 = never;
-type UUID = never;
-type EntityMetadata = never;
-type Position = never;
-type u8 = never;
-type bool = never;
-type Slot = never;
-type f32 = never;
+// type f64 = never;
+// type i16 = never;
+// type i8 = never;
+// type i32 = never;
+// type UUID = never;
+// type EntityMetadata = never;
+// type Position = never;
+// type u8 = never;
+// type bool = never;
+// type Slot = never;
+// type f32 = never;
 type Void = never;
-type i64 = never;
-type OptionalNbt = never;
+// type i64 = never;
+// type OptionalNbt = never;
 type RestBuffer = never;
-type Nbt = never;
-type VarLong = never;
-type u16 = never;
+// type Nbt = never;
+// type VarLong = never;
+// type u16 = never;
 type Arr<T> = never;
 type BitField<T> = never;
 type Option<T> = never;
 type Buffer<T> = never;
 type Record_<K, V, Size = VarInt> = never;
 "#;
-
-fn do_array_to_map_transform(top_lvl_ty: &mut Ty) {
-    match top_lvl_ty {
-        Ty::Array { ty } => {
-            let (count_type, ty) = match ty {
-                ArrayType::VariableSize(VariableArrayType { count_type, ty }) => {
-                    let mut count_type = count_type.clone();
-                    walk_ty(&mut count_type, do_array_to_map_transform);
-                    (HashCountType::Typed(count_type), ty)
-                }
-                ArrayType::FixedSize(FixedArrayType { count, ty }) => {
-                    (HashCountType::Fixed(*count), ty)
-                }
-            };
-
-            if let Ty::Container { ref mut ty } = ty.as_mut() {
-                if ty.fields.len() == 2 {
-                    match (ty.fields.get(0), ty.fields.get(1)) {
-                        (
-                            Some(TypeInContainer::Named(TypeWithName { name, ref ty })),
-                            Some(TypeInContainer::Named(TypeWithName {
-                                name: name2,
-                                ty: ref ty2,
-                            })),
-                        ) if name == "key" && name2 == "value" => {
-                            let mut ty = ty.clone();
-                            let mut ty2 = ty2.clone();
-                            walk_ty(&mut ty, do_array_to_map_transform);
-                            walk_ty(&mut ty2, do_array_to_map_transform);
-                            *top_lvl_ty = Ty::Map {
-                                key: Box::new(ty),
-                                value: Box::new(ty2),
-                                count_type,
-                            };
-                        }
-                        (
-                            Some(TypeInContainer::Named(TypeWithName { name, ref ty })),
-                            Some(TypeInContainer::Named(TypeWithName {
-                                name: name2,
-                                ty: ref ty2,
-                            })),
-                        ) if name2 == "key" && name == "value" => {
-                            let mut ty2 = ty2.clone();
-                            let mut ty = ty.clone();
-                            walk_ty(&mut ty2, do_array_to_map_transform);
-                            walk_ty(&mut ty, do_array_to_map_transform);
-                            *top_lvl_ty = Ty::Map {
-                                key: Box::new(ty2),
-                                value: Box::new(ty),
-                                count_type,
-                            };
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-        _ => {}
-    }
-}
 
 // changes all arrays with varint countType and values of compound {key, value} to Map<key, value>
 
@@ -483,119 +534,78 @@ fn main() -> anyhow::Result<()> {
 
     writeln!(file, "{PRELUDE}")?;
 
-    // handshaking
+    let mut anon = 0;
 
-    writeln!(file, "namespace handshaking.to_client {{")?;
-    let mut packets = p
-        .handshaking
-        .to_client
-        .types
-        .into_iter()
-        .collect::<Vec<_>>();
+    {
+        let mut tys = p.types.into_iter().collect::<Vec<_>>();
 
-    packets.sort_by_key(|x| x.0.clone());
+        tys.sort_by_key(|x| x.0.clone());
 
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
+        for (name, mut ty) in tys {
+            walk_ty(&mut ty, do_array_to_map_transform);
+            let intf = format!(
+                "\ntype {} = {}\n",
+                {
+                    if name == "void" {
+                        "_void"
+                    } else if name == "string" {
+                        "_string"
+                    } else if name == "switch" {
+                        "switch_"
+                    } else {
+                        &name
+                    }
+                },
+                print_ty(&ty, &mut anon)
+            );
+            writeln!(file, "{intf}")?;
+        }
     }
-    writeln!(file, "}}")?;
 
-    writeln!(file, "namespace handshaking.to_server {{")?;
-    let mut packets = p
-        .handshaking
-        .to_server
-        .types
-        .into_iter()
-        .collect::<Vec<_>>();
+    fn print_bidi_packet_block(
+        file: &mut impl Write,
+        namespace: &str,
+        packets: BiDirectionalPackets,
+        anon: &mut u32,
+    ) -> anyhow::Result<()> {
+        {
+            writeln!(file, "namespace {namespace}.to_client {{")?;
+            let mut packets = packets.to_client.types.into_iter().collect::<Vec<_>>();
 
-    packets.sort_by_key(|x| x.0.clone());
+            packets.sort_by_key(|x| x.0.clone());
 
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
+            for (name, mut ty) in packets {
+                walk_ty(&mut ty, do_array_to_map_transform);
+                let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty, anon));
+                writeln!(file, "{intf}")?;
+            }
+            writeln!(file, "}}")?;
+        }
+
+        {
+            writeln!(file, "namespace {namespace}.to_server {{")?;
+            let mut packets = packets.to_server.types.into_iter().collect::<Vec<_>>();
+
+            packets.sort_by_key(|x| x.0.clone());
+
+            for (name, mut ty) in packets {
+                walk_ty(&mut ty, do_array_to_map_transform);
+                let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty, anon));
+                writeln!(file, "{intf}")?;
+            }
+            writeln!(file, "}}")?;
+        }
+
+        Ok(())
     }
-    writeln!(file, "}}")?;
 
-    // status
-
-    writeln!(file, "namespace status.to_client {{")?;
-    let mut packets = p.status.to_client.types.into_iter().collect::<Vec<_>>();
-
-    packets.sort_by_key(|x| x.0.clone());
-
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
+    print_bidi_packet_block(&mut file, "handshaking", p.handshaking, &mut anon)?;
+    print_bidi_packet_block(&mut file, "status", p.status, &mut anon)?;
+    print_bidi_packet_block(&mut file, "login", p.login, &mut anon)?;
+    if let Some(configuration) = p.configuration {
+        print_bidi_packet_block(&mut file, "configuration", configuration, &mut anon)?;
     }
-    writeln!(file, "}}")?;
-
-    writeln!(file, "namespace status.to_server {{")?;
-    let mut packets = p.status.to_server.types.into_iter().collect::<Vec<_>>();
-
-    packets.sort_by_key(|x| x.0.clone());
-
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
-    }
-    writeln!(file, "}}")?;
-
-    // login
-
-    writeln!(file, "namespace login.to_client {{")?;
-    let mut packets = p.login.to_client.types.into_iter().collect::<Vec<_>>();
-
-    packets.sort_by_key(|x| x.0.clone());
-
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
-    }
-    writeln!(file, "}}")?;
-
-    writeln!(file, "namespace login.to_server {{")?;
-    let mut packets = p.login.to_server.types.into_iter().collect::<Vec<_>>();
-
-    packets.sort_by_key(|x| x.0.clone());
-
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
-    }
-    writeln!(file, "}}")?;
-
-    // play
-
-    writeln!(file, "namespace play.to_client {{")?;
-    let mut packets = p.play.to_client.types.into_iter().collect::<Vec<_>>();
-
-    packets.sort_by_key(|x| x.0.clone());
-
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
-    }
-    writeln!(file, "}}")?;
-
-    writeln!(file, "namespace play.to_server {{")?;
-    let mut packets = p.play.to_server.types.into_iter().collect::<Vec<_>>();
-
-    packets.sort_by_key(|x| x.0.clone());
-
-    for (name, mut ty) in packets {
-        walk_ty(&mut ty, do_array_to_map_transform);
-        let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty));
-        writeln!(file, "{intf}")?;
-    }
-    writeln!(file, "}}")?;
+    print_bidi_packet_block(&mut file, "play", p.play, &mut anon)?;
 
     // println!("{p:#?}");
 

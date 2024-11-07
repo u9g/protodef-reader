@@ -1,4 +1,4 @@
-use crate::{ArrayType, HashCountType, Ty, TypeInContainer};
+use crate::{ArrayType, BufferType, HashCountType, Ty, TypeInContainer};
 
 pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
     on_each_type(top_lvl_ty);
@@ -12,8 +12,12 @@ pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
                 walk_ty(&mut variable_array_type.count_type, on_each_type);
                 walk_ty(&mut variable_array_type.ty, on_each_type);
             }
+            ArrayType::ReferencedLength(explicit_referenced_length_type) => {
+                walk_ty(&mut explicit_referenced_length_type.ty, on_each_type);
+            }
         },
-        Ty::VarInt
+        Ty::EntityMetadataItem { .. }
+        | Ty::VarInt
         | Ty::F64
         | Ty::I16
         | Ty::I8
@@ -32,11 +36,17 @@ pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
         | Ty::RestBuffer
         | Ty::Nbt
         | Ty::VarLong
+        | Ty::AnonymousNbt
+        | Ty::ArrayWithLengthOffset
         | Ty::NonNativeType(_)
         | Ty::BitField { .. }
+        | Ty::NativeType
         | Ty::U16 => {}
         Ty::Option { ty } => walk_ty(ty.as_mut(), on_each_type),
-        Ty::Buffer { ty } => walk_ty(&mut ty.count_type, on_each_type),
+        Ty::Buffer { ty } => match ty {
+            BufferType::Typed { count_type } => walk_ty(count_type, on_each_type),
+            BufferType::Fixed { .. } => {}
+        },
         Ty::Switch { switch } => {
             if let Some(default) = &mut switch.default {
                 walk_ty(default, on_each_type);
@@ -71,8 +81,11 @@ pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
             walk_ty(value, on_each_type);
             match count_type {
                 HashCountType::Typed(ty) => walk_ty(ty, on_each_type),
-                HashCountType::Fixed(_) => {}
+                HashCountType::ReferencedLength(_) | HashCountType::Fixed(_) => {}
             }
         }
+        Ty::PString { count_type } => walk_ty(count_type, on_each_type),
+        Ty::EntityMetadataLoop { ty } => walk_ty(&mut ty.ty, on_each_type),
+        Ty::TopBitSetTerminatedArray { ty } => walk_ty(ty, on_each_type),
     }
 }

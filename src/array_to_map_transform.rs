@@ -1,5 +1,6 @@
 use crate::{
-    ArrayType, FixedArrayType, HashCountType, Ty, TypeInContainer, TypeWithName, VariableArrayType,
+    ArrayType, ExplicitReferencedLengthType, FixedArrayType, HashCountType, Ty, TypeInContainer,
+    TypeWithName, VariableArrayType,
 };
 
 pub fn do_array_to_map_transform(top_lvl_ty: &mut Ty) {
@@ -12,6 +13,13 @@ pub fn do_array_to_map_transform(top_lvl_ty: &mut Ty) {
                 ArrayType::FixedSize(FixedArrayType { count, ty }) => {
                     (HashCountType::Fixed(*count), ty)
                 }
+                ArrayType::ReferencedLength(ExplicitReferencedLengthType {
+                    referenced_length,
+                    ty,
+                }) => (
+                    HashCountType::ReferencedLength(referenced_length.clone()),
+                    ty,
+                ),
             };
 
             if let Ty::Container { ref mut ty } = ty.as_mut() {

@@ -6,7 +6,8 @@ use serde::{
 };
 
 use crate::{
-    ArrayType, BitFieldType, BufferType, ContainerType, MapperType, SwitchType, Ty, TypeInContainer,
+    ArrayType, BitFieldType, BufferType, ContainerType, EntityMetadataItemType,
+    EntityMetadataLoopType, MapperType, SwitchType, Ty, TypeInContainer,
 };
 
 impl<'de> Deserialize<'de> for Ty {
@@ -56,6 +57,8 @@ impl<'de> Visitor<'de> for TyVisitor {
             "nbt" => Ok(Ty::Nbt),
             "varlong" => Ok(Ty::VarLong),
             "u16" => Ok(Ty::U16),
+            "anonymousNbt" => Ok(Ty::AnonymousNbt),
+            "native" => Ok(Ty::NativeType),
             named => {
                 println!("non native type: {}", named);
                 Ok(Ty::NonNativeType(named.to_string()))
@@ -130,6 +133,19 @@ impl<'de> Visitor<'de> for TyVisitor {
                     .ok_or_else(|| de::Error::invalid_length(1, &self))?;
                 Ok(Ty::Array { ty: value })
             }
+            "pstring" => {
+                #[derive(Deserialize)]
+                struct PStringArgumentsObject {
+                    #[serde(rename = "countType")]
+                    count_type: Ty,
+                }
+                let arguments_object: PStringArgumentsObject = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                Ok(Ty::PString {
+                    count_type: Box::new(arguments_object.count_type),
+                })
+            }
             "option" => {
                 let value: Ty = seq
                     .next_element()?
@@ -143,6 +159,38 @@ impl<'de> Visitor<'de> for TyVisitor {
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(1, &self))?;
                 Ok(Ty::Mapper { mapper: value })
+            }
+            "arrayWithLengthOffset" => {
+                let _value: serde_json::Value = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                // todo: deserialize arguments
+                Ok(Ty::ArrayWithLengthOffset)
+            }
+            "entityMetadataLoop" => {
+                let value: EntityMetadataLoopType = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                Ok(Ty::EntityMetadataLoop { ty: value })
+            }
+            "topBitSetTerminatedArray" => {
+                #[derive(Deserialize)]
+                struct TopBitSetTerminatedArrayArguments {
+                    #[serde(rename = "type")]
+                    ty: Ty,
+                }
+                let value: TopBitSetTerminatedArrayArguments = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                Ok(Ty::TopBitSetTerminatedArray {
+                    ty: Box::new(value.ty),
+                })
+            }
+            "entityMetadataItem" => {
+                let value: EntityMetadataItemType = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                Ok(Ty::EntityMetadataItem { ty: value })
             }
             _ => Err(de::Error::invalid_value(de::Unexpected::Str(&tag), &self)),
         }
