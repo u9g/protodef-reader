@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.92"
 insta = { version = "1.41.1", features = ["glob"] }
+oxc = "0.35.0"
+oxc_semantic = "0.35.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }

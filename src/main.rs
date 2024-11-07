@@ -1,12 +1,12 @@
-use anyhow::Context;
 use array_to_map_transform::do_array_to_map_transform;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::io::Write;
-use std::{collections::HashMap, fs::OpenOptions};
 use walk::walk_ty;
 
 mod array_to_map_transform;
 mod de;
+mod oxc_find;
 mod walk;
 
 #[cfg(test)]
@@ -27,7 +27,7 @@ mod test {
                 .context("failed to parse protocol.json file")
                 .unwrap_or_else(|e| panic!("{e:#?}, failed to parse protocol.json file: {path:?}"));
 
-            assert_snapshot!(format!("{:?}", p));
+            assert_snapshot!(format!("{:#?}", p));
         });
     }
 }
@@ -519,48 +519,48 @@ type Record_<K, V, Size = VarInt> = never;
 // changes all arrays with varint countType and values of compound {key, value} to Map<key, value>
 
 fn main() -> anyhow::Result<()> {
-    let protocol_txt = include_str!("protocol.json");
+    // let protocol_txt = include_str!("protocol.json");
 
-    let p: Protocol =
-        serde_json::from_str(protocol_txt).context("failed to parse protocol.json file")?;
+    // let p: Protocol =
+    //     serde_json::from_str(protocol_txt).context("failed to parse protocol.json file")?;
 
-    std::fs::remove_file("protocol.ts")?;
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        // .truncate(true)
-        .open("protocol.ts")?;
+    // std::fs::remove_file("protocol.ts")?;
+    // let mut file = OpenOptions::new()
+    //     .write(true)
+    //     .append(true)
+    //     .create(true)
+    //     // .truncate(true)
+    //     .open("protocol.ts")?;
 
-    writeln!(file, "{PRELUDE}")?;
+    // writeln!(file, "{PRELUDE}")?;
 
-    let mut anon = 0;
+    // let mut anon = 0;
 
-    {
-        let mut tys = p.types.into_iter().collect::<Vec<_>>();
+    // {
+    //     let mut tys = p.types.into_iter().collect::<Vec<_>>();
 
-        tys.sort_by_key(|x| x.0.clone());
+    //     tys.sort_by_key(|x| x.0.clone());
 
-        for (name, mut ty) in tys {
-            walk_ty(&mut ty, do_array_to_map_transform);
-            let intf = format!(
-                "\ntype {} = {}\n",
-                {
-                    if name == "void" {
-                        "_void"
-                    } else if name == "string" {
-                        "_string"
-                    } else if name == "switch" {
-                        "switch_"
-                    } else {
-                        &name
-                    }
-                },
-                print_ty(&ty, &mut anon)
-            );
-            writeln!(file, "{intf}")?;
-        }
-    }
+    //     for (name, mut ty) in tys {
+    //         walk_ty(&mut ty, do_array_to_map_transform);
+    //         let intf = format!(
+    //             "\ntype {} = {}\n",
+    //             {
+    //                 if name == "void" {
+    //                     "_void"
+    //                 } else if name == "string" {
+    //                     "_string"
+    //                 } else if name == "switch" {
+    //                     "switch_"
+    //                 } else {
+    //                     &name
+    //                 }
+    //             },
+    //             print_ty(&ty, &mut anon)
+    //         );
+    //         writeln!(file, "{intf}")?;
+    //     }
+    // }
 
     fn print_bidi_packet_block(
         file: &mut impl Write,
@@ -599,15 +599,15 @@ fn main() -> anyhow::Result<()> {
         Ok(())
     }
 
-    print_bidi_packet_block(&mut file, "handshaking", p.handshaking, &mut anon)?;
-    print_bidi_packet_block(&mut file, "status", p.status, &mut anon)?;
-    print_bidi_packet_block(&mut file, "login", p.login, &mut anon)?;
-    if let Some(configuration) = p.configuration {
-        print_bidi_packet_block(&mut file, "configuration", configuration, &mut anon)?;
-    }
-    print_bidi_packet_block(&mut file, "play", p.play, &mut anon)?;
+    // print_bidi_packet_block(&mut file, "handshaking", p.handshaking, &mut anon)?;
+    // print_bidi_packet_block(&mut file, "status", p.status, &mut anon)?;
+    // print_bidi_packet_block(&mut file, "login", p.login, &mut anon)?;
+    // if let Some(configuration) = p.configuration {
+    //     print_bidi_packet_block(&mut file, "configuration", configuration, &mut anon)?;
+    // }
+    // print_bidi_packet_block(&mut file, "play", p.play, &mut anon)?;
 
-    // println!("{p:#?}");
+    oxc_find::find();
 
     Ok(())
 }
