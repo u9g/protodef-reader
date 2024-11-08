@@ -88,5 +88,6 @@ pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
         Ty::PString { count_type } => walk_ty(count_type, on_each_type),
         Ty::EntityMetadataLoop { ty } => walk_ty(&mut ty.ty, on_each_type),
         Ty::TopBitSetTerminatedArray { ty } => walk_ty(ty, on_each_type),
+        Ty::Count { ty } => walk_ty(&mut ty.ty, on_each_type),
     }
 }

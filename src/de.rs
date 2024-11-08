@@ -195,6 +195,12 @@ impl<'de> Visitor<'de> for TyVisitor {
                     .ok_or_else(|| de::Error::invalid_length(1, &self))?;
                 Ok(Ty::ParticleData { ty: value })
             }
+            "count" => {
+                let value: CountType = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                Ok(Ty::Count { ty: value })
+            }
             _ => Err(de::Error::invalid_value(de::Unexpected::Str(&tag), &self)),
         }
     }

@@ -155,6 +155,14 @@ struct SwitchType {
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+struct CountType {
+    #[serde(rename = "countFor")]
+    count_for: String,
+    #[serde(rename = "type")]
+    ty: Box<Ty>,
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 #[serde(untagged)]
 enum BufferType {
     Typed {
@@ -242,6 +250,10 @@ enum Ty {
 
     NativeType,
     NonNativeType(String),
+
+    Count {
+        ty: CountType,
+    },
 
     TopBitSetTerminatedArray {
         ty: Box<Ty>,
@@ -486,6 +498,13 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
         }
         Ty::ParticleData { ty } => {
             format!("ParticleData<{{ compareTo: \"{}\" }}>", ty.compare_to)
+        }
+        Ty::Count { ty } => {
+            format!(
+                "Count<{{ countFor: \"{}\", type: {} }}>",
+                ty.count_for,
+                print_ty(&ty.ty, anon)
+            )
         }
     }
 }
