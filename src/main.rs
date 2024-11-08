@@ -38,16 +38,35 @@ mod test {
             assert_snapshot!(result);
         });
     }
+
+    #[test]
+    fn test_parsing_mcdata_protocol_files() {
+        glob!("../minecraft-data/data/pc", "**/protocol.json", |path| {
+            let input = fs::read_to_string(path).unwrap();
+
+            let p: Protocol = serde_json::from_str(&input)
+                .context("failed to parse protocol.json file")
+                .unwrap_or_else(|e| panic!("{e:#?}, failed to parse protocol.json file: {path:?}"));
+
+            let mut buffer = Cursor::new(Vec::new()); // Cursor around Vec<u8>
+
+            print_to_writer(p, &mut buffer).unwrap();
+
+            let result = String::from_utf8(buffer.into_inner()).unwrap(); // Convert Vec<u8> to String
+
+            assert_snapshot!(result);
+        });
+    }
 }
 
 #[derive(Debug, Deserialize)]
 struct Protocol {
     types: HashMap<String, Ty>,
-    handshaking: BiDirectionalPackets,
-    status: BiDirectionalPackets,
-    login: BiDirectionalPackets,
+    handshaking: Option<BiDirectionalPackets>,
+    status: Option<BiDirectionalPackets>,
+    login: Option<BiDirectionalPackets>,
     configuration: Option<BiDirectionalPackets>,
-    play: BiDirectionalPackets,
+    play: Option<BiDirectionalPackets>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -176,6 +195,12 @@ struct EntityMetadataItemType {
     compare_to: String,
 }
 
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+struct ParticleDataType {
+    #[serde(rename = "compareTo")]
+    compare_to: String,
+}
+
 const VARINT_TO_BE_PRINTED_IN_ARRAY_SIZE_OR_HASHMAP_SIZE: bool = false;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -203,6 +228,10 @@ enum Ty {
     AnonymousNbt,
     EntityMetadataItem {
         ty: EntityMetadataItemType,
+    },
+
+    ParticleData {
+        ty: ParticleDataType,
     },
 
     // todo: add arguments
@@ -455,6 +484,9 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
         Ty::EntityMetadataItem { ty } => {
             format!("entityMetadataItem<{{ compareTo: \"{}\" }}>", ty.compare_to)
         }
+        Ty::ParticleData { ty } => {
+            format!("ParticleData<{{ compareTo: \"{}\" }}>", ty.compare_to)
+        }
     }
 }
 
@@ -526,6 +558,7 @@ type pstring<T> = never;
 type entityMetadataLoop<T> = never;
 type option<T> = never;
 type String_ = never;
+type ParticleData<T> = never;
 "#;
 
 fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()> {
@@ -538,6 +571,7 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
         types_not_to_print.insert("void".to_string());
         types_not_to_print.insert("string".to_string());
         types_not_to_print.insert("switch".to_string());
+        types_not_to_print.insert("particleData".to_string());
         types_not_to_print
     };
 
@@ -598,13 +632,21 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
         Ok(())
     }
 
-    print_bidi_packet_block(&mut file, "handshaking", p.handshaking, &mut anon)?;
-    print_bidi_packet_block(&mut file, "status", p.status, &mut anon)?;
-    print_bidi_packet_block(&mut file, "login", p.login, &mut anon)?;
+    if let Some(handshaking) = p.handshaking {
+        print_bidi_packet_block(&mut file, "handshaking", handshaking, &mut anon)?;
+    }
+    if let Some(status) = p.status {
+        print_bidi_packet_block(&mut file, "status", status, &mut anon)?;
+    }
+    if let Some(login) = p.login {
+        print_bidi_packet_block(&mut file, "login", login, &mut anon)?;
+    }
     if let Some(configuration) = p.configuration {
         print_bidi_packet_block(&mut file, "configuration", configuration, &mut anon)?;
     }
-    print_bidi_packet_block(&mut file, "play", p.play, &mut anon)?;
+    if let Some(play) = p.play {
+        print_bidi_packet_block(&mut file, "play", play, &mut anon)?;
+    }
 
     Ok(())
 }

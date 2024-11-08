@@ -5,10 +5,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use crate::{
-    ArrayType, BitFieldType, BufferType, ContainerType, EntityMetadataItemType,
-    EntityMetadataLoopType, MapperType, SwitchType, Ty, TypeInContainer,
-};
+use crate::*;
 
 impl<'de> Deserialize<'de> for Ty {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -191,6 +188,12 @@ impl<'de> Visitor<'de> for TyVisitor {
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(1, &self))?;
                 Ok(Ty::EntityMetadataItem { ty: value })
+            }
+            "particleData" => {
+                let value: ParticleDataType = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                Ok(Ty::ParticleData { ty: value })
             }
             _ => Err(de::Error::invalid_value(de::Unexpected::Str(&tag), &self)),
         }

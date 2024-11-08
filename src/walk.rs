@@ -20,6 +20,7 @@ pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
         | Ty::VarInt
         | Ty::F64
         | Ty::I16
+        | Ty::ParticleData { .. }
         | Ty::I8
         | Ty::I32
         | Ty::UUID
