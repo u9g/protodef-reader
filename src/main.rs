@@ -1,7 +1,7 @@
 use anyhow::Context;
 use array_to_map_transform::do_array_to_map_transform;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::OpenOptions;
 use std::io::Write;
 use walk::walk_ty;
@@ -261,7 +261,7 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
         Ty::I32 => "i32".to_string(),
         Ty::UUID => "UUID".to_string(),
         Ty::EntityMetadata => "entityMetadata".to_string(),
-        Ty::String => "string".to_string(),
+        Ty::String => "String_".to_string(),
         Ty::Position => "position".to_string(),
         Ty::U8 => "u8".to_string(),
         Ty::Bool => "bool".to_string(),
@@ -272,9 +272,9 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
         Ty::OptionalNbt => "OptionalNbt".to_string(),
         Ty::RestBuffer => "RestBuffer".to_string(),
         Ty::Nbt => "Nbt".to_string(),
-        Ty::VarLong => "VarLong".to_string(),
+        Ty::VarLong => "varlong".to_string(),
         Ty::U16 => "u16".to_string(),
-        Ty::Option { ty } => format!("Option<{}>", print_ty(ty, anon)),
+        Ty::Option { ty } => format!("option<{}>", print_ty(ty, anon)),
         Ty::Map {
             key,
             value,
@@ -331,7 +331,7 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
                         .default
                         .as_ref()
                         .map(|x| print_ty(x, anon))
-                        .unwrap_or_else(|| "void".to_string()),
+                        .unwrap_or_else(|| "Void".to_string()),
                     switch.compare_to
                 )
             } else {
@@ -440,7 +440,7 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
         Ty::AnonymousNbt => "anonymousNbt".to_string(),
         Ty::ArrayWithLengthOffset => "arrayWithLengthOffset".to_string(),
         Ty::PString { count_type } => {
-            format!("PString<{{ countType: {} }}>", print_ty(count_type, anon))
+            format!("pstring<{{ countType: {} }}>", print_ty(count_type, anon))
         }
         Ty::EntityMetadataLoop { ty } => {
             format!(
@@ -519,12 +519,28 @@ type RestBuffer = never;
 // type u16 = never;
 type Arr<T> = never;
 type BitField<T> = never;
-type Option<T> = never;
 type Buffer<T> = never;
-type Record_<K, V, Size = VarInt> = never;
+type Record_<K, V, Size = varint> = never;
+type topBitSetTerminatedArray<T> = never;
+type pstring<T> = never;
+type entityMetadataLoop<T> = never;
+type option<T> = never;
+type String_ = never;
 "#;
 
 fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()> {
+    let types_not_to_print: HashSet<String> = {
+        let mut types_not_to_print = HashSet::new();
+        types_not_to_print.insert("topBitSetTerminatedArray".to_string());
+        types_not_to_print.insert("pstring".to_string());
+        types_not_to_print.insert("entityMetadataLoop".to_string());
+        types_not_to_print.insert("option".to_string());
+        types_not_to_print.insert("void".to_string());
+        types_not_to_print.insert("string".to_string());
+        types_not_to_print.insert("switch".to_string());
+        types_not_to_print
+    };
+
     writeln!(file, "{PRELUDE}")?;
 
     let mut anon = 0;
@@ -535,22 +551,12 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
         tys.sort_by_key(|x| x.0.clone());
 
         for (name, mut ty) in tys {
+            if types_not_to_print.contains(&name) {
+                continue;
+            }
+
             walk_ty(&mut ty, do_array_to_map_transform);
-            let intf = format!(
-                "\ntype {} = {}\n",
-                {
-                    if name == "void" {
-                        "_void"
-                    } else if name == "string" {
-                        "_string"
-                    } else if name == "switch" {
-                        "switch_"
-                    } else {
-                        &name
-                    }
-                },
-                print_ty(&ty, &mut anon)
-            );
+            let intf = format!("\ntype {} = {}\n", name, print_ty(&ty, &mut anon));
             writeln!(file, "{intf}")?;
         }
     }

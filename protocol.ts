@@ -19,31 +19,35 @@ type RestBuffer = never;
 // type u16 = never;
 type Arr<T> = never;
 type BitField<T> = never;
-type Option<T> = never;
 type Buffer<T> = never;
-type Record_<K, V, Size = VarInt> = never;
+type Record_<K, V, Size = varint> = never;
+type topBitSetTerminatedArray<T> = never;
+type pstring<T> = never;
+type entityMetadataLoop<T> = never;
+type option<T> = never;
+type String_ = never;
 
 type BlockPredicate = {
-  blockSet: Option<BlockSet[]>;
+  blockSet: option<BlockSet[]>;
   nbt: anonOptionalNbt;
-  properties: Option<BlockProperty[]>;
+  properties: option<BlockProperty[]>;
 };
 
 type BlockProperty = {
-  exactValue: Option<string>;
+  exactValue: option<String_>;
   isExactMatch: bool;
-  maxValue: Option<string>;
-  minValue: Option<string>;
-  name: string;
+  maxValue: option<String_>;
+  minValue: option<String_>;
+  name: String_;
 };
 
 type BlockSet = {
   blockIds: { "0": Void; _: arrayWithLengthOffset } /* .get(type) */;
-  name: { "0": string; _: Void } /* .get(type) */;
+  name: { "0": String_; _: Void } /* .get(type) */;
   type: VarInt;
 };
 
-type BookPage = { content: string; filteredContent: Option<string> };
+type BookPage = { content: String_; filteredContent: option<String_> };
 
 type ByteArray = Buffer<{ countType: VarInt }>;
 
@@ -51,7 +55,7 @@ type EffectDetail = {
   ambient: bool;
   amplifier: VarInt;
   duration: VarInt;
-  hiddenEffect: Option<EffectDetail>;
+  hiddenEffect: option<EffectDetail>;
   showIcon: bool;
   showParticles: bool;
 };
@@ -95,12 +99,12 @@ type Particle = {
       position: {
         block: position;
         entity: { entityId: VarInt; entity_eye_height: f32 };
-        _: void;
+        _: Void;
       } /* .get(position_type) */;
       position_type: { 0: "block"; 1: "entity"; _: Void }[] /* mapper */;
       ticks: VarInt;
     };
-    _: void;
+    _: Void;
   } /* .get(type) */;
   type: {
     0: "angry_villager";
@@ -254,7 +258,7 @@ type SlotComponent = {
   data: {
     attribute_modifiers: {
       attributes: {
-        name: string;
+        name: String_;
         operation: {
           0: "add";
           1: "multiply_base";
@@ -283,8 +287,8 @@ type SlotComponent = {
     banner_patterns: {
       layers: {
         _anon_1: {
-          "0": { assetId: string; translationKey: string };
-          _: void;
+          "0": { assetId: String_; translationKey: String_ };
+          _: Void;
         } /* .get(patternType) */;
         color: VarInt;
         patternType: VarInt;
@@ -299,7 +303,7 @@ type SlotComponent = {
       }[];
     };
     block_entity_data: anonymousNbt;
-    block_state: { properties: { property: string; value: string }[] };
+    block_state: { properties: { property: String_; value: String_ }[] };
     bucket_entity_data: anonymousNbt;
     bundle_contents: { contents: Slot[] };
     can_break: { predicates: BlockPredicate[]; showTooltip: bool };
@@ -335,8 +339,8 @@ type SlotComponent = {
     hide_tooltip: Void;
     instrument: {
       _anon_2: {
-        "0": { range: f32; soundEvent: string; useDuration: f32 };
-        _: void;
+        "0": { range: f32; soundEvent: String_; useDuration: f32 };
+        _: Void;
       } /* .get(instrumentType) */;
       instrumentType: VarInt;
     };
@@ -344,34 +348,34 @@ type SlotComponent = {
     item_name: anonymousNbt;
     jukebox_playable: {
       _anon_3: {
-        false: { songLocation: string };
+        false: { songLocation: String_ };
         true: {
           _anon_4: {
             "0": {
               soundEvent: {
                 _anon_5: {
-                  "0": { fixedRange: Option<f32>; soundName: string };
-                  _: void;
+                  "0": { fixedRange: option<f32>; soundName: String_ };
+                  _: Void;
                 } /* .get(soundEventType) */;
                 soundEventType: VarInt;
               };
             };
-            _: void;
+            _: Void;
           } /* .get(jukeboxSongType) */;
           description: anonymousNbt;
           duration: f32;
-          jukeboxSongName: string;
+          jukeboxSongName: String_;
           jukeboxSongType: VarInt;
           output: VarInt;
         };
-        _: void;
+        _: Void;
       } /* .get(directMode) */;
       directMode: bool;
       showInTooltip: bool;
     };
     lock: anonymousNbt;
     lodestone_tracker: {
-      globalPosition: Option<{ dimension: string; position: vec3f }>;
+      globalPosition: option<{ dimension: String_; position: vec3f }>;
       tracked: bool;
     };
     lore: anonOptionalNbt[];
@@ -381,7 +385,7 @@ type SlotComponent = {
     map_post_processing: VarInt;
     max_damage: VarInt;
     max_stack_size: VarInt;
-    note_block_sound: string;
+    note_block_sound: String_;
     ominous_bottle_amplifier: VarInt;
     pot_decorations: { decorations: VarInt[] };
     potion_contents: {
@@ -394,12 +398,12 @@ type SlotComponent = {
     profile: {
       hasName: bool;
       hasUniqueId: bool;
-      name: string;
+      name: String_;
       properties: {
         hasSignature: bool;
-        property: string;
-        signature: string;
-        value: string;
+        property: String_;
+        signature: String_;
+        value: String_;
       }[];
       uniqueId: UUID;
     };
@@ -427,23 +431,26 @@ type SlotComponent = {
     trim: {
       _anon_6: {
         "0": {
-          assetName: string;
-          description: string;
+          assetName: String_;
+          description: String_;
           ingredientId: VarInt;
           itemModelIndex: f32;
           numberOfOverrides: optvarint;
-          override: { armorMaterialType: VarInt; overridenAssetName: string }[];
+          override: {
+            armorMaterialType: VarInt;
+            overridenAssetName: String_;
+          }[];
         };
-        _: void;
+        _: Void;
       } /* .get(materialType) */;
       _anon_7: {
         "0": {
-          assetName: string;
+          assetName: String_;
           decal: bool;
-          description: string;
+          description: String_;
           templateItem: VarInt;
         };
-        _: void;
+        _: Void;
       } /* .get(trimPatternType) */;
       materialType: VarInt;
       showInTooltip: bool;
@@ -452,14 +459,14 @@ type SlotComponent = {
     unbreakable: bool;
     writable_book_content: { pages: BookPage[] };
     written_book_content: {
-      author: string;
-      filteredTitle: Option<string>;
+      author: String_;
+      filteredTitle: option<String_>;
       generation: VarInt;
       pages: BookPage[];
-      rawTitle: string;
+      rawTitle: String_;
       resolved: bool;
     };
-    _: void;
+    _: Void;
   } /* .get(type) */;
   type: SlotComponentType;
 };
@@ -541,7 +548,7 @@ type bool = never; /* native */
 
 type buffer = never; /* native */
 
-type chat_session = Option<{
+type chat_session = option<{
   publicKey: {
     expireTime: i64;
     keyBytes: Buffer<{ countType: VarInt }>;
@@ -566,9 +573,9 @@ type command_node = {
   children: VarInt[];
   extraNodeData: {
     "0": Void;
-    "1": { name: string };
+    "1": { name: String_ };
     "2": {
-      name: string;
+      name: String_;
       parser: {
         0: "brigadier:bool";
         1: "brigadier:float";
@@ -710,11 +717,11 @@ type command_node = {
         "minecraft:objective_criteria": Void;
         "minecraft:operation": Void;
         "minecraft:particle": Void;
-        "minecraft:resource": { registry: string };
-        "minecraft:resource_key": { registry: string };
+        "minecraft:resource": { registry: String_ };
+        "minecraft:resource_key": { registry: String_ };
         "minecraft:resource_location": Void;
-        "minecraft:resource_or_tag": { registry: string };
-        "minecraft:resource_or_tag_key": { registry: string };
+        "minecraft:resource_or_tag": { registry: String_ };
+        "minecraft:resource_or_tag_key": { registry: String_ };
         "minecraft:rotation": Void;
         "minecraft:score_holder": BitField<{
           fields: [
@@ -731,14 +738,14 @@ type command_node = {
         "minecraft:uuid": Void;
         "minecraft:vec2": Void;
         "minecraft:vec3": Void;
-        _: void;
+        _: Void;
       } /* .get(parser) */;
       suggestionType: {
-        "1": string;
+        "1": String_;
         _: Void;
       } /* .get(../flags/has_custom_suggestions) */;
     };
-    _: void;
+    _: Void;
   } /* .get(flags/command_node_type) */;
   flags: BitField<{
     fields: [
@@ -809,21 +816,21 @@ type entityMetadataEntry = {
     frog_variant: VarInt;
     int: VarInt;
     item_stack: Slot;
-    long: VarLong;
-    optional_block_pos: Option<position>;
+    long: varlong;
+    optional_block_pos: option<position>;
     optional_block_state: optvarint;
-    optional_component: Option<anonymousNbt>;
-    optional_global_pos: Option<string>;
+    optional_component: option<anonymousNbt>;
+    optional_global_pos: option<String_>;
     optional_unsigned_int: optvarint;
-    optional_uuid: Option<UUID>;
-    painting_variant: { assetId: string; height: VarInt; width: VarInt };
+    optional_uuid: option<UUID>;
+    painting_variant: { assetId: String_; height: VarInt; width: VarInt };
     particle: Particle;
     particles: Particle[];
     pose: VarInt;
     quaternion: vec4f;
     rotations: { pitch: f32; roll: f32; yaw: f32 };
     sniffer_state: VarInt;
-    string: string;
+    string: String_;
     vector3: vec3f;
     villager_data: {
       level: VarInt;
@@ -831,29 +838,27 @@ type entityMetadataEntry = {
       villagerType: VarInt;
     };
     wolf_variant: {
-      angryTexture: string;
+      angryTexture: String_;
       biomeHolders: {
         "0": Void;
         _: arrayWithLengthOffset;
       } /* .get(maybeInputLength) */;
-      biomeLocation: { "0": string; _: void } /* .get(maybeInputLength) */;
+      biomeLocation: { "0": String_; _: Void } /* .get(maybeInputLength) */;
       maybeInputLength: VarInt;
-      tameTexture: string;
-      wildTexture: string;
+      tameTexture: String_;
+      wildTexture: String_;
     };
-    _: void;
+    _: Void;
   } /* .get(type) */;
 };
-
-type entityMetadataLoop = never; /* native */
 
 type f32 = never; /* native */
 
 type f64 = never; /* native */
 
 type game_profile = {
-  name: string;
-  properties: { key: string; signature: Option<string>; value: string }[];
+  name: String_;
+  properties: { key: String_; signature: option<String_>; value: String_ }[];
 };
 
 type i16 = never; /* native */
@@ -872,39 +877,39 @@ type minecraft_smelting_format = {
   category: VarInt;
   cookTime: VarInt;
   experience: f32;
-  group: string;
+  group: String_;
   ingredient: ingredient;
   result: Slot;
 };
-
-type option = never; /* native */
 
 type optvarint = VarInt;
 
 type packedChunkPos = { x: i32; z: i32 };
 
-type packet_common_cookie_request = { cookie: string };
+type packet_common_cookie_request = { cookie: String_ };
 
-type packet_common_cookie_response = { key: string; value: ByteArray };
+type packet_common_cookie_response = { key: String_; value: ByteArray };
 
-type packet_common_custom_report_details = { details: Record_<string, string> };
+type packet_common_custom_report_details = {
+  details: Record_<String_, String_>;
+};
 
 type packet_common_select_known_packs = {
-  packs: { id: string; namespace: string; version: string }[];
+  packs: { id: String_; namespace: String_; version: String_ }[];
 };
 
 type packet_common_server_links = {
   links: {
     hasKnownType: bool;
-    knownType: { true: ServerLinkType; _: void } /* .get(hasKnownType) */;
-    link: string;
-    unknownType: { false: anonymousNbt; _: void } /* .get(hasKnownType) */;
+    knownType: { true: ServerLinkType; _: Void } /* .get(hasKnownType) */;
+    link: String_;
+    unknownType: { false: anonymousNbt; _: Void } /* .get(hasKnownType) */;
   }[];
 };
 
-type packet_common_store_cookie = { key: string; value: ByteArray };
+type packet_common_store_cookie = { key: String_; value: ByteArray };
 
-type packet_common_transfer = { host: string; port: VarInt };
+type packet_common_transfer = { host: String_; port: VarInt };
 
 type position = BitField<{
   fields: [
@@ -918,8 +923,6 @@ type previousMessages = {
   id: VarInt;
   signature: { "0": Buffer<{ count: 256 }>; _: Void } /* .get(id) */;
 }[];
-
-type pstring = never; /* native */
 
 type restBuffer = never; /* native */
 
@@ -937,13 +940,7 @@ type soundSource = {
   _: Void;
 }[]; /* mapper */
 
-type _string = PString<{ countType: VarInt }>;
-
-type switch_ = never; /* native */
-
-type tags = { entries: VarInt[]; tagName: string }[];
-
-type topBitSetTerminatedArray = never; /* native */
+type tags = { entries: VarInt[]; tagName: String_ }[];
 
 type u16 = never; /* native */
 
@@ -965,8 +962,6 @@ type vec3f64 = { x: f64; y: f64; z: f64 };
 
 type vec4f = { w: f32; x: f32; y: f32; z: f32 };
 
-type _void = never; /* native */
-
 namespace handshaking.to_client {
   interface packet {
     name: /* empty mapper */ any;
@@ -983,7 +978,7 @@ namespace handshaking.to_server {
     params: {
       legacy_server_list_ping: packet_legacy_server_list_ping;
       set_protocol: packet_set_protocol;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -993,7 +988,7 @@ namespace handshaking.to_server {
 
   interface packet_set_protocol {
     protocolVersion: VarInt;
-    serverHost: string;
+    serverHost: String_;
     serverPort: u16;
     nextState: VarInt;
   }
@@ -1004,7 +999,7 @@ namespace status.to_client {
     params: {
       ping: packet_ping;
       server_info: packet_server_info;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -1013,7 +1008,7 @@ namespace status.to_client {
   }
 
   interface packet_server_info {
-    response: string;
+    response: String_;
   }
 }
 namespace status.to_server {
@@ -1022,7 +1017,7 @@ namespace status.to_server {
     params: {
       ping: packet_ping;
       ping_start: packet_ping_start;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -1050,7 +1045,7 @@ namespace login.to_client {
       encryption_begin: packet_encryption_begin;
       login_plugin_request: packet_login_plugin_request;
       success: packet_success;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -1059,11 +1054,11 @@ namespace login.to_client {
   }
 
   interface packet_disconnect {
-    reason: string;
+    reason: String_;
   }
 
   interface packet_encryption_begin {
-    serverId: string;
+    serverId: String_;
     publicKey: Buffer<{ countType: VarInt }>;
     verifyToken: Buffer<{ countType: VarInt }>;
     shouldAuthenticate: bool;
@@ -1071,14 +1066,14 @@ namespace login.to_client {
 
   interface packet_login_plugin_request {
     messageId: VarInt;
-    channel: string;
+    channel: String_;
     data: RestBuffer;
   }
 
   interface packet_success {
     uuid: UUID;
-    username: string;
-    properties: { name: string; signature: Option<string>; value: string }[];
+    username: String_;
+    properties: { name: String_; signature: option<String_>; value: String_ }[];
     strictErrorHandling: bool;
   }
 }
@@ -1098,7 +1093,7 @@ namespace login.to_server {
       login_acknowledged: packet_login_acknowledged;
       login_plugin_response: packet_login_plugin_response;
       login_start: packet_login_start;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -1111,11 +1106,11 @@ namespace login.to_server {
 
   interface packet_login_plugin_response {
     messageId: VarInt;
-    data: Option<RestBuffer>;
+    data: option<RestBuffer>;
   }
 
   interface packet_login_start {
-    username: string;
+    username: String_;
     playerUUID: UUID;
   }
 }
@@ -1159,20 +1154,20 @@ namespace configuration.to_client {
       store_cookie: packet_common_store_cookie;
       tags: packet_tags;
       transfer: packet_common_transfer;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
   interface packet_add_resource_pack {
     uuid: UUID;
-    url: string;
-    hash: string;
+    url: String_;
+    hash: String_;
     forced: bool;
-    promptMessage: Option<anonymousNbt>;
+    promptMessage: option<anonymousNbt>;
   }
 
   interface packet_custom_payload {
-    channel: string;
+    channel: String_;
     data: RestBuffer;
   }
 
@@ -1181,7 +1176,7 @@ namespace configuration.to_client {
   }
 
   interface packet_feature_flags {
-    features: string[];
+    features: String_[];
   }
 
   interface packet_finish_configuration {}
@@ -1195,18 +1190,18 @@ namespace configuration.to_client {
   }
 
   interface packet_registry_data {
-    id: string;
-    entries: Record_<string, Option<anonymousNbt>>;
+    id: String_;
+    entries: Record_<String_, option<anonymousNbt>>;
   }
 
   interface packet_remove_resource_pack {
-    uuid: Option<UUID>;
+    uuid: option<UUID>;
   }
 
   interface packet_reset_chat {}
 
   interface packet_tags {
-    tags: { tagType: string; tags: tags }[];
+    tags: { tagType: String_; tags: tags }[];
   }
 }
 namespace configuration.to_server {
@@ -1235,12 +1230,12 @@ namespace configuration.to_server {
       select_known_packs: packet_common_select_known_packs;
       server_links: packet_common_server_links;
       settings: packet_settings;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
   interface packet_custom_payload {
-    channel: string;
+    channel: String_;
     data: RestBuffer;
   }
 
@@ -1260,7 +1255,7 @@ namespace configuration.to_server {
   }
 
   interface packet_settings {
-    locale: string;
+    locale: String_;
     viewDistance: i8;
     chatFlags: VarInt;
     chatColors: bool;
@@ -1272,7 +1267,7 @@ namespace configuration.to_server {
 }
 namespace play.to_client {
   interface ChatType {
-    translationKey: string;
+    translationKey: String_;
     parameters: ChatTypeParameterType[];
     style: anonymousNbt;
   }
@@ -1295,7 +1290,7 @@ namespace play.to_client {
 
   interface SpawnInfo {
     dimension: VarInt;
-    name: string;
+    name: String_;
     hashedSeed: i64;
     gamemode: {
       0: "survival";
@@ -1307,7 +1302,7 @@ namespace play.to_client {
     previousGamemode: u8;
     isDebug: bool;
     isFlat: bool;
-    death: Option<{ dimensionName: string; location: position }>;
+    death: option<{ dimensionName: String_; location: position }>;
     portalCooldown: VarInt;
   }
 
@@ -1558,7 +1553,7 @@ namespace play.to_client {
       world_border_warning_reach: packet_world_border_warning_reach;
       world_event: packet_world_event;
       world_particles: packet_world_particles;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -1578,20 +1573,20 @@ namespace play.to_client {
 
   interface packet_add_resource_pack {
     uuid: UUID;
-    url: string;
-    hash: string;
+    url: String_;
+    hash: String_;
     forced: bool;
-    promptMessage: Option<anonymousNbt>;
+    promptMessage: option<anonymousNbt>;
   }
 
   interface packet_advancements {
     reset: bool;
     advancementMapping: Record_<
-      string,
+      String_,
       {
-        displayData: Option<{
+        displayData: option<{
           backgroundTexture: {
-            "1": string;
+            "1": String_;
             _: Void;
           } /* .get(flags/has_background_texture) */;
           description: anonymousNbt;
@@ -1609,15 +1604,15 @@ namespace play.to_client {
           xCord: f32;
           yCord: f32;
         }>;
-        parentId: Option<string>;
-        requirements: string[][];
+        parentId: option<String_>;
+        requirements: String_[][];
         sendsTelemtryData: bool;
       }
     >;
-    identifiers: string[];
+    identifiers: String_[];
     progressMapping: Record_<
-      string,
-      { criterionIdentifier: string; criterionProgress: Option<i64> }[]
+      String_,
+      { criterionIdentifier: String_; criterionProgress: option<i64> }[]
     >;
   }
 
@@ -1665,7 +1660,7 @@ namespace play.to_client {
 
   interface packet_chat_suggestions {
     action: VarInt;
-    entries: string[];
+    entries: String_[];
   }
 
   interface packet_chunk_batch_finished {
@@ -1700,11 +1695,11 @@ namespace play.to_client {
 
   interface packet_craft_recipe_response {
     windowId: i8;
-    recipe: string;
+    recipe: String_;
   }
 
   interface packet_custom_payload {
-    channel: string;
+    channel: String_;
     data: RestBuffer;
   }
 
@@ -1713,7 +1708,7 @@ namespace play.to_client {
     sourceTypeId: VarInt;
     sourceCauseId: VarInt;
     sourceDirectId: VarInt;
-    sourcePosition: Option<vec3f64>;
+    sourcePosition: option<vec3f64>;
   }
 
   interface packet_death_combat_event {
@@ -1739,7 +1734,7 @@ namespace play.to_client {
         "minecraft:crafting_decorated_pot": minecraft_simple_recipe_format;
         "minecraft:crafting_shaped": {
           category: VarInt;
-          group: string;
+          group: String_;
           height: VarInt;
           ingredients: Arr<{
             referencedLength: "width";
@@ -1754,7 +1749,7 @@ namespace play.to_client {
         };
         "minecraft:crafting_shapeless": {
           category: VarInt;
-          group: string;
+          group: String_;
           ingredients: ingredient[];
           result: Slot;
         };
@@ -1786,13 +1781,13 @@ namespace play.to_client {
         };
         "minecraft:smoking": minecraft_smelting_format;
         "minecraft:stonecutting": {
-          group: string;
+          group: String_;
           ingredient: ingredient;
           result: Slot;
         };
-        _: void;
+        _: Void;
       } /* .get(type) */;
-      name: string;
+      name: String_;
       type: {
         0: "minecraft:crafting_shaped";
         1: "minecraft:crafting_shapeless";
@@ -1880,7 +1875,7 @@ namespace play.to_client {
   interface packet_entity_sound_effect {
     soundId: VarInt;
     soundEvent: {
-      "0": { range: Option<f32>; resource: string };
+      "0": { range: option<f32>; resource: String_ };
       _: Void;
     } /* .get(soundId) */;
     soundCategory: soundSource;
@@ -1933,7 +1928,7 @@ namespace play.to_client {
         9: "generic.flying_speed";
         _: Void;
       }[] /* mapper */;
-      modifiers: { amount: f64; operation: i8; uuid: string }[];
+      modifiers: { amount: f64; operation: i8; uuid: String_ }[];
       value: f64;
     }[];
   }
@@ -1965,7 +1960,7 @@ namespace play.to_client {
     large_explosion_particle: Particle;
     soundId: VarInt;
     _anon_10: {
-      "0": { range: Option<f32>; soundName: string };
+      "0": { range: option<f32>; soundName: String_ };
       _: {};
     } /* .get(soundId) */;
   }
@@ -2021,7 +2016,7 @@ namespace play.to_client {
   interface packet_login {
     entityId: i32;
     isHardcore: bool;
-    worldNames: string[];
+    worldNames: String_[];
     maxPlayers: VarInt;
     viewDistance: VarInt;
     simulationDistance: VarInt;
@@ -2036,10 +2031,10 @@ namespace play.to_client {
     itemDamage: VarInt;
     scale: i8;
     locked: bool;
-    icons: Option<
+    icons: option<
       {
         direction: u8;
-        displayName: Option<anonymousNbt>;
+        displayName: option<anonymousNbt>;
         type: VarInt;
         x: i8;
         z: i8;
@@ -2114,17 +2109,17 @@ namespace play.to_client {
   interface packet_player_chat {
     senderUuid: UUID;
     index: VarInt;
-    signature: Option<Buffer<{ count: 256 }>>;
-    plainMessage: string;
+    signature: option<Buffer<{ count: 256 }>>;
+    plainMessage: String_;
     timestamp: i64;
     salt: i64;
     previousMessages: previousMessages;
-    unsignedChatContent: Option<anonymousNbt>;
+    unsignedChatContent: option<anonymousNbt>;
     filterType: VarInt;
     filterTypeMask: { "2": i64[]; _: Void } /* .get(filterType) */;
     type: ChatTypes;
     networkName: anonymousNbt;
-    networkTargetName: Option<anonymousNbt>;
+    networkTargetName: option<anonymousNbt>;
   }
 
   interface packet_player_info {
@@ -2166,38 +2161,38 @@ namespace play.to_client {
         _: Void;
       } /* .get(../action) */;
       displayName: {
-        "32": Option<anonymousNbt>;
-        "33": Option<anonymousNbt>;
-        "34": Option<anonymousNbt>;
-        "35": Option<anonymousNbt>;
-        "36": Option<anonymousNbt>;
-        "37": Option<anonymousNbt>;
-        "38": Option<anonymousNbt>;
-        "39": Option<anonymousNbt>;
-        "40": Option<anonymousNbt>;
-        "41": Option<anonymousNbt>;
-        "42": Option<anonymousNbt>;
-        "43": Option<anonymousNbt>;
-        "44": Option<anonymousNbt>;
-        "45": Option<anonymousNbt>;
-        "46": Option<anonymousNbt>;
-        "47": Option<anonymousNbt>;
-        "48": Option<anonymousNbt>;
-        "49": Option<anonymousNbt>;
-        "50": Option<anonymousNbt>;
-        "51": Option<anonymousNbt>;
-        "52": Option<anonymousNbt>;
-        "53": Option<anonymousNbt>;
-        "54": Option<anonymousNbt>;
-        "55": Option<anonymousNbt>;
-        "56": Option<anonymousNbt>;
-        "57": Option<anonymousNbt>;
-        "58": Option<anonymousNbt>;
-        "59": Option<anonymousNbt>;
-        "60": Option<anonymousNbt>;
-        "61": Option<anonymousNbt>;
-        "62": Option<anonymousNbt>;
-        "63": Option<anonymousNbt>;
+        "32": option<anonymousNbt>;
+        "33": option<anonymousNbt>;
+        "34": option<anonymousNbt>;
+        "35": option<anonymousNbt>;
+        "36": option<anonymousNbt>;
+        "37": option<anonymousNbt>;
+        "38": option<anonymousNbt>;
+        "39": option<anonymousNbt>;
+        "40": option<anonymousNbt>;
+        "41": option<anonymousNbt>;
+        "42": option<anonymousNbt>;
+        "43": option<anonymousNbt>;
+        "44": option<anonymousNbt>;
+        "45": option<anonymousNbt>;
+        "46": option<anonymousNbt>;
+        "47": option<anonymousNbt>;
+        "48": option<anonymousNbt>;
+        "49": option<anonymousNbt>;
+        "50": option<anonymousNbt>;
+        "51": option<anonymousNbt>;
+        "52": option<anonymousNbt>;
+        "53": option<anonymousNbt>;
+        "54": option<anonymousNbt>;
+        "55": option<anonymousNbt>;
+        "56": option<anonymousNbt>;
+        "57": option<anonymousNbt>;
+        "58": option<anonymousNbt>;
+        "59": option<anonymousNbt>;
+        "60": option<anonymousNbt>;
+        "61": option<anonymousNbt>;
+        "62": option<anonymousNbt>;
+        "63": option<anonymousNbt>;
         _: Void;
       } /* .get(../action) */;
       gamemode: {
@@ -2367,7 +2362,7 @@ namespace play.to_client {
     message: anonymousNbt;
     type: ChatTypes;
     name: anonymousNbt;
-    target: Option<anonymousNbt>;
+    target: option<anonymousNbt>;
   }
 
   interface packet_rel_entity_move {
@@ -2384,12 +2379,12 @@ namespace play.to_client {
   }
 
   interface packet_remove_resource_pack {
-    uuid: Option<UUID>;
+    uuid: option<UUID>;
   }
 
   interface packet_reset_score {
-    entity_name: string;
-    objective_name: Option<string>;
+    entity_name: String_;
+    objective_name: option<String_>;
   }
 
   interface packet_respawn {
@@ -2399,11 +2394,11 @@ namespace play.to_client {
 
   interface packet_scoreboard_display_objective {
     position: VarInt;
-    name: string;
+    name: String_;
   }
 
   interface packet_scoreboard_objective {
-    name: string;
+    name: String_;
     action: i8;
     displayText: {
       "0": anonymousNbt;
@@ -2412,8 +2407,8 @@ namespace play.to_client {
     } /* .get(action) */;
     type: { "0": VarInt; "2": VarInt; _: Void } /* .get(action) */;
     number_format: {
-      "0": Option<VarInt>;
-      "2": Option<VarInt>;
+      "0": option<VarInt>;
+      "2": option<VarInt>;
       _: Void;
     } /* .get(action) */;
     styling: {
@@ -2432,11 +2427,11 @@ namespace play.to_client {
   }
 
   interface packet_scoreboard_score {
-    itemName: string;
-    scoreName: string;
+    itemName: String_;
+    scoreName: String_;
     value: VarInt;
-    display_name: Option<anonymousNbt>;
-    number_format: Option<VarInt>;
+    display_name: option<anonymousNbt>;
+    number_format: option<VarInt>;
     styling: {
       "1": anonymousNbt;
       "2": anonymousNbt;
@@ -2445,12 +2440,12 @@ namespace play.to_client {
   }
 
   interface packet_select_advancement_tab {
-    id: Option<string>;
+    id: option<String_>;
   }
 
   interface packet_server_data {
     motd: anonymousNbt;
-    iconBytes: Option<ByteArray>;
+    iconBytes: option<ByteArray>;
   }
 
   interface packet_set_cooldown {
@@ -2501,7 +2496,7 @@ namespace play.to_client {
   interface packet_sound_effect {
     soundId: VarInt;
     soundEvent: {
-      "0": { range: Option<f32>; resource: string };
+      "0": { range: option<f32>; resource: String_ };
       _: Void;
     } /* .get(soundId) */;
     soundCategory: soundSource;
@@ -2555,7 +2550,7 @@ namespace play.to_client {
   interface packet_stop_sound {
     flags: i8;
     source: { "1": VarInt; "3": VarInt; _: Void } /* .get(flags) */;
-    sound: { "2": string; "3": string; _: Void } /* .get(flags) */;
+    sound: { "2": String_; "3": String_; _: Void } /* .get(flags) */;
   }
 
   interface packet_system_chat {
@@ -2567,27 +2562,27 @@ namespace play.to_client {
     transactionId: VarInt;
     start: VarInt;
     length: VarInt;
-    matches: { match: string; tooltip: Option<anonymousNbt> }[];
+    matches: { match: String_; tooltip: option<anonymousNbt> }[];
   }
 
   interface packet_tags {
-    tags: { tagType: string; tags: tags }[];
+    tags: { tagType: String_; tags: tags }[];
   }
 
   interface packet_teams {
-    team: string;
+    team: String_;
     mode: i8;
     name: { "0": anonymousNbt; "2": anonymousNbt; _: Void } /* .get(mode) */;
     friendlyFire: { "0": i8; "2": i8; _: Void } /* .get(mode) */;
-    nameTagVisibility: { "0": string; "2": string; _: Void } /* .get(mode) */;
-    collisionRule: { "0": string; "2": string; _: Void } /* .get(mode) */;
+    nameTagVisibility: { "0": String_; "2": String_; _: Void } /* .get(mode) */;
+    collisionRule: { "0": String_; "2": String_; _: Void } /* .get(mode) */;
     formatting: { "0": VarInt; "2": VarInt; _: Void } /* .get(mode) */;
     prefix: { "0": anonymousNbt; "2": anonymousNbt; _: Void } /* .get(mode) */;
     suffix: { "0": anonymousNbt; "2": anonymousNbt; _: Void } /* .get(mode) */;
     players: {
-      "0": string[];
-      "3": string[];
-      "4": string[];
+      "0": String_[];
+      "3": String_[];
+      "4": String_[];
       _: Void;
     } /* .get(mode) */;
   }
@@ -2611,7 +2606,7 @@ namespace play.to_client {
         itemCount: VarInt;
         itemId: VarInt;
       };
-      inputItem2: Option<{
+      inputItem2: option<{
         addedComponentCount: VarInt;
         components: Arr<{
           referencedLength: "addedComponentCount";
@@ -2649,8 +2644,8 @@ namespace play.to_client {
     filteringBlastFurnace: bool;
     smokerBookOpen: bool;
     filteringSmoker: bool;
-    recipes1: string[];
-    recipes2: { "0": string[]; _: Void } /* .get(action) */;
+    recipes1: String_[];
+    recipes2: { "0": String_[]; _: Void } /* .get(action) */;
   }
 
   interface packet_update_health {
@@ -2863,7 +2858,7 @@ namespace play.to_server {
       use_item: packet_use_item;
       vehicle_move: packet_vehicle_move;
       window_click: packet_window_click;
-      _: void;
+      _: Void;
     } /* .get(name) */;
   }
 
@@ -2873,7 +2868,7 @@ namespace play.to_server {
 
   interface packet_advancement_tab {
     action: VarInt;
-    tabId: { "0": string; "1": Void; _: void } /* .get(action) */;
+    tabId: { "0": String_; "1": Void; _: Void } /* .get(action) */;
   }
 
   interface packet_arm_animation {
@@ -2899,15 +2894,15 @@ namespace play.to_server {
   }
 
   interface packet_chat_command {
-    command: string;
+    command: String_;
   }
 
   interface packet_chat_command_signed {
-    command: string;
+    command: String_;
     timestamp: i64;
     salt: i64;
     argumentSignatures: {
-      argumentName: string;
+      argumentName: String_;
       signature: Buffer<{ count: 256 }>;
     }[];
     messageCount: VarInt;
@@ -2915,10 +2910,10 @@ namespace play.to_server {
   }
 
   interface packet_chat_message {
-    message: string;
+    message: String_;
     timestamp: i64;
     salt: i64;
-    signature: Option<Buffer<{ count: 256 }>>;
+    signature: option<Buffer<{ count: 256 }>>;
     offset: VarInt;
     acknowledged: Buffer<{ count: 3 }>;
   }
@@ -2946,12 +2941,12 @@ namespace play.to_server {
 
   interface packet_craft_recipe_request {
     windowId: i8;
-    recipe: string;
+    recipe: String_;
     makeAll: bool;
   }
 
   interface packet_custom_payload {
-    channel: string;
+    channel: String_;
     data: RestBuffer;
   }
 
@@ -2960,13 +2955,13 @@ namespace play.to_server {
   }
 
   interface packet_displayed_recipe {
-    recipeId: string;
+    recipeId: String_;
   }
 
   interface packet_edit_book {
     hand: VarInt;
-    pages: string[];
-    title: Option<string>;
+    pages: String_[];
+    title: option<String_>;
   }
 
   interface packet_enchant_item {
@@ -3013,7 +3008,7 @@ namespace play.to_server {
   }
 
   interface packet_name_item {
-    name: string;
+    name: String_;
   }
 
   interface packet_pick_item {
@@ -3070,8 +3065,8 @@ namespace play.to_server {
   }
 
   interface packet_set_beacon_effect {
-    primary_effect: Option<VarInt>;
-    secondary_effect: Option<VarInt>;
+    primary_effect: option<VarInt>;
+    secondary_effect: option<VarInt>;
   }
 
   interface packet_set_creative_slot {
@@ -3090,7 +3085,7 @@ namespace play.to_server {
   }
 
   interface packet_settings {
-    locale: string;
+    locale: String_;
     viewDistance: i8;
     chatFlags: VarInt;
     chatColors: bool;
@@ -3117,7 +3112,7 @@ namespace play.to_server {
 
   interface packet_tab_complete {
     transactionId: VarInt;
-    text: string;
+    text: String_;
   }
 
   interface packet_teleport_confirm {
@@ -3126,24 +3121,24 @@ namespace play.to_server {
 
   interface packet_update_command_block {
     location: position;
-    command: string;
+    command: String_;
     mode: VarInt;
     flags: u8;
   }
 
   interface packet_update_command_block_minecart {
     entityId: VarInt;
-    command: string;
+    command: String_;
     track_output: bool;
   }
 
   interface packet_update_jigsaw_block {
     location: position;
-    name: string;
-    target: string;
-    pool: string;
-    finalState: string;
-    jointType: string;
+    name: String_;
+    target: String_;
+    pool: String_;
+    finalState: String_;
+    jointType: String_;
     selection_priority: VarInt;
     placement_priority: VarInt;
   }
@@ -3151,17 +3146,17 @@ namespace play.to_server {
   interface packet_update_sign {
     location: position;
     isFrontText: bool;
-    text1: string;
-    text2: string;
-    text3: string;
-    text4: string;
+    text1: String_;
+    text2: String_;
+    text3: String_;
+    text4: String_;
   }
 
   interface packet_update_structure_block {
     location: position;
     action: VarInt;
     mode: VarInt;
-    name: string;
+    name: String_;
     offset_x: i8;
     offset_y: i8;
     offset_z: i8;
@@ -3170,7 +3165,7 @@ namespace play.to_server {
     size_z: i8;
     mirror: VarInt;
     rotation: VarInt;
-    metadata: string;
+    metadata: String_;
     integrity: f32;
     seed: VarInt;
     flags: u8;
