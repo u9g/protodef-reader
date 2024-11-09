@@ -17,8 +17,9 @@ mod test {
 
     use anyhow::Context;
     use insta::{assert_snapshot, glob};
+    use serde_json::json;
 
-    use crate::{print_to_writer, Protocol};
+    use crate::*;
 
     #[test]
     fn test_parsing_protocol_files() {
@@ -56,6 +57,150 @@ mod test {
 
             assert_snapshot!(result);
         });
+    }
+
+    #[test]
+    fn test_deserialization() {
+        let v: HashMap<String, Ty> = serde_json::from_value(json!(
+            r#"{"packet_map_chunk_bulk": [
+          "container",
+          [
+            {
+              "name": "chunkColumnCount",
+              "type": [
+                "count",
+                {
+                  "type": "i16",
+                  "countFor": "meta"
+                }
+              ]
+            },
+            {
+              "name": "dataLength",
+              "type": [
+                "count",
+                {
+                  "type": "i32",
+                  "countFor": "compressedChunkData"
+                }
+              ]
+            },
+            {
+              "name": "skyLightSent",
+              "type": "bool"
+            },
+            {
+              "name": "compressedChunkData",
+              "type": [
+                "buffer",
+                {
+                  "count": "dataLength"
+                }
+              ]
+            },
+            {
+              "name": "meta",
+              "type": [
+                "array",
+                {
+                  "count": "chunkColumnCount",
+                  "type": [
+                    "container",
+                    [
+                      {
+                        "name": "x",
+                        "type": "i32"
+                      },
+                      {
+                        "name": "z",
+                        "type": "i32"
+                      },
+                      {
+                        "name": "bitMap",
+                        "type": "u16"
+                      },
+                      {
+                        "name": "addBitMap",
+                        "type": "u16"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        ]}"#
+        ))
+        .unwrap();
+    }
+
+    #[test]
+    fn test_type_in_container_deserialization() {
+        let v: TypeInContainer = serde_json::from_value(json!({
+          "name": "meta",
+          "type": [
+            "array",
+            {
+              "count": "chunkColumnCount",
+              "type": [
+                "container",
+                [
+                  {
+                    "name": "x",
+                    "type": "i32"
+                  },
+                  {
+                    "name": "z",
+                    "type": "i32"
+                  },
+                  {
+                    "name": "bitMap",
+                    "type": "u16"
+                  },
+                  {
+                    "name": "addBitMap",
+                    "type": "u16"
+                  }
+                ]
+              ]
+            }
+          ]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            v,
+            TypeInContainer::Named(TypeWithName {
+                name: "meta".to_string(),
+                ty: Ty::Array {
+                    ty: ArrayType::ReferencedLength(ExplicitReferencedLengthType {
+                        referenced_length: "chunkColumnCount".to_string(),
+                        ty: Box::new(Ty::Container {
+                            ty: ContainerType {
+                                fields: vec![
+                                    TypeInContainer::Named(TypeWithName {
+                                        name: "x".to_string(),
+                                        ty: Ty::I32,
+                                    }),
+                                    TypeInContainer::Named(TypeWithName {
+                                        name: "z".to_string(),
+                                        ty: Ty::I32,
+                                    }),
+                                    TypeInContainer::Named(TypeWithName {
+                                        name: "bitMap".to_string(),
+                                        ty: Ty::U16,
+                                    }),
+                                    TypeInContainer::Named(TypeWithName {
+                                        name: "addBitMap".to_string(),
+                                        ty: Ty::U16,
+                                    }),
+                                ],
+                            }
+                        }),
+                    })
+                },
+            })
+        );
     }
 }
 
@@ -170,8 +315,15 @@ enum BufferType {
         count_type: Box<Ty>,
     },
     Fixed {
-        count: u32,
+        count: BufferCount,
     },
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[serde(untagged)]
+enum BufferCount {
+    Fixed(u32),
+    ReferencedLength(String),
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
@@ -476,7 +628,13 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
             BufferType::Typed { count_type } => {
                 format!("Buffer<{{ countType: {} }}>", print_ty(count_type, anon))
             }
-            BufferType::Fixed { count } => format!("Buffer<{{ count: {} }}>", count),
+            BufferType::Fixed { count } => {
+                let var_name = match count {
+                    BufferCount::Fixed(s) => format!("{}", s),
+                    BufferCount::ReferencedLength(s) => format!("\"{}\"", s),
+                };
+                format!("Buffer<{{ count: {var_name} }}>")
+            }
         },
         Ty::AnonymousNbt => "anonymousNbt".to_string(),
         Ty::ArrayWithLengthOffset => "arrayWithLengthOffset".to_string(),
@@ -509,9 +667,9 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
     }
 }
 
-fn print_multiline_block(ty: &Ty, anon: &mut u32) -> String {
-    if let Ty::Mapper { .. } = ty {
-        return print_ty(ty, anon);
+fn print_multiline_block(ty: &Ty, anon: &mut u32, name: &str) -> String {
+    if !matches!(ty, Ty::Container { .. }) {
+        return format!("type {name} = {};", print_ty(ty, anon));
     }
 
     let Ty::Container { ty } = &ty else {
@@ -522,7 +680,7 @@ fn print_multiline_block(ty: &Ty, anon: &mut u32) -> String {
     };
 
     format!(
-        "{{\n{}\n}}",
+        "\ninterface {name} {{\n{}\n}}\n",
         ty.fields
             .iter()
             .map(|x| match x {
@@ -628,7 +786,7 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
 
             for (name, mut ty) in packets {
                 walk_ty(&mut ty, do_array_to_map_transform);
-                let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty, anon));
+                let intf = print_multiline_block(&ty, anon, &name);
                 writeln!(file, "{intf}")?;
             }
             writeln!(file, "}}")?;
@@ -642,7 +800,7 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
 
             for (name, mut ty) in packets {
                 walk_ty(&mut ty, do_array_to_map_transform);
-                let intf = format!("\ninterface {name} {}\n", print_multiline_block(&ty, anon));
+                let intf = print_multiline_block(&ty, anon, &name);
                 writeln!(file, "{intf}")?;
             }
             writeln!(file, "}}")?;
