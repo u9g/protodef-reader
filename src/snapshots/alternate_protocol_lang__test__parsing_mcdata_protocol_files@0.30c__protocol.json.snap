@@ -1,0 +1,47 @@
+---
+source: src/main.rs
+expression: result
+input_file: minecraft-data/data/pc/0.30c/protocol.json
+snapshot_kind: text
+---
+type VarInt = never;
+// type f64 = never;
+// type i16 = never;
+// type i8 = never;
+// type i32 = never;
+// type UUID = never;
+// type EntityMetadata = never;
+// type Position = never;
+// type u8 = never;
+// type bool = never;
+// type Slot = never;
+// type f32 = never;
+type Void = never;
+// type i64 = never;
+// type OptionalNbt = never;
+type RestBuffer = never;
+// type Nbt = never;
+// type VarLong = never;
+// type u16 = never;
+type Arr<T> = never;
+type BitField<T> = never;
+type Buffer<T> = never;
+type Record_<K, V, Size = varint> = never;
+type topBitSetTerminatedArray<T> = never;
+type pstring<T> = never;
+type entityMetadataLoop<T> = never;
+type option<T> = never;
+type String_ = never;
+type ParticleData<T> = never;
+
+
+type byte_array = never /* native */
+
+
+type i16 = never /* native */
+
+
+type i8 = never /* native */
+
+
+type u8 = never /* native */

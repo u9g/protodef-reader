@@ -32,6 +32,7 @@ type pstring<T> = never;
 type entityMetadataLoop<T> = never;
 type option<T> = never;
 type String_ = never;
+type ParticleData<T> = never;
 
 
 type UUID = never /* native */

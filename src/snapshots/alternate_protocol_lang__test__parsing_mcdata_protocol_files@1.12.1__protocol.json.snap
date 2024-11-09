@@ -1,7 +1,7 @@
 ---
 source: src/main.rs
 expression: result
-input_file: src/inputs/1_12_2_protocol.json
+input_file: minecraft-data/data/pc/1.12.1/protocol.json
 snapshot_kind: text
 ---
 type VarInt = never;
@@ -466,7 +466,7 @@ interface packet_held_item_slot {
 
 
 interface packet_keep_alive {
-	keepAliveId: i64,
+	keepAliveId: VarInt,
 }
 
 
@@ -955,7 +955,7 @@ interface packet_held_item_slot {
 
 
 interface packet_keep_alive {
-	keepAliveId: i64,
+	keepAliveId: VarInt,
 }
 
 

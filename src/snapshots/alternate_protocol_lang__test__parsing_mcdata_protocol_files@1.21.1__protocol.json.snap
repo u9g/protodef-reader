@@ -1,7 +1,7 @@
 ---
 source: src/main.rs
 expression: result
-input_file: src/inputs/1_21_1_protocol.json
+input_file: minecraft-data/data/pc/1.21.1/protocol.json
 snapshot_kind: text
 ---
 type VarInt = never;
