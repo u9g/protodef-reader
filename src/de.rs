@@ -57,7 +57,7 @@ impl<'de> Visitor<'de> for TyVisitor {
             "anonymousNbt" => Ok(Ty::AnonymousNbt),
             "native" => Ok(Ty::NativeType),
             named => {
-                println!("non native type: {}", named);
+                // println!("non native type: {}", named);
                 Ok(Ty::NonNativeType(named.to_string()))
             } // _ => Err(de::Error::unknown_variant(
               //     v,

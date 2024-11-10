@@ -5,8 +5,19 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.92"
+codespan = "0.11.1"
 insta = { version = "1.41.1", features = ["glob"] }
 oxc = "0.35.0"
 oxc_semantic = "0.35.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+wasm-bindgen = "0.2.95"
+
+[lib]
+name = "mylib"
+path = "src/lib.rs"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "mybin"
+path = "src/bin.rs"

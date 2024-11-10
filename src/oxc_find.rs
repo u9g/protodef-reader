@@ -1,19 +1,11 @@
-use std::{env, path::Path, sync::Arc};
+use std::sync::Arc;
 
+use codespan::Files;
 use oxc::{allocator::Allocator, ast::ast::Statement, parser::Parser, span::SourceType};
-use oxc_semantic::SemanticBuilder;
 
-pub fn find() -> anyhow::Result<()> {
-    let ns = "play";
-    let dir = "to_server";
-    let looking_for = "packet_edit_book";
-
-    let name = env::args()
-        .nth(1)
-        .unwrap_or_else(|| "protocol.ts".to_string());
-    let path = Path::new(&name);
-    let source_text = Arc::new(std::fs::read_to_string(path)?);
-    let source_type = SourceType::from_path(path).unwrap();
+pub fn find(s: String) -> anyhow::Result<String> {
+    let source_text = Arc::new(s);
+    let source_type = SourceType::from_path("protocol.ts").unwrap();
     // Memory arena where Semantic and Parser allocate objects
     let allocator = Allocator::default();
 
@@ -27,8 +19,11 @@ pub fn find() -> anyhow::Result<()> {
             .collect::<Vec<_>>()
             .join("\n");
         println!("Parsing failed:\n\n{error_message}",);
-        return Ok(());
+        return Err(anyhow::anyhow!("Parsing failed"));
     }
+
+    let mut files: Files<&str> = Files::new();
+    let the_file = files.add("the-file", &source_text);
 
     let program = parser_ret.program;
 
@@ -72,19 +67,29 @@ pub fn find() -> anyhow::Result<()> {
             x2.body
                 .iter()
                 .filter_map(|z| match z {
-                    Statement::TSInterfaceDeclaration(y) => Some((
-                        x0.clone(),
-                        x1.clone(),
-                        y.id.name.to_string(),
-                        vec![y.span.start, y.span.end],
-                    )),
+                    Statement::TSInterfaceDeclaration(y) => {
+                        Some((x0.clone(), x1.clone(), y.id.name.to_string(), {
+                            let mut v: Vec<_> = Vec::with_capacity(4);
+                            let loc1 = files.location(the_file, y.span.start).unwrap();
+                            v.push(loc1.line.0);
+                            v.push(loc1.column.0);
+                            let loc2 = files.location(the_file, y.span.end).unwrap();
+                            v.push(loc2.line.0);
+                            v.push(loc2.column.0);
+
+                            v
+                        }))
+                    }
                     _ => None,
                 })
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
 
-    println!("{}", serde_json::to_string_pretty(&y).unwrap());
-
-    Ok(())
+    Ok(serde_json::to_string_pretty(
+        &y.into_iter()
+            .map(|x| (format!("{}.{}.{}", x.0, x.1, x.2), x.3))
+            .collect::<Vec<_>>(),
+    )
+    .unwrap())
 }

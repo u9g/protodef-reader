@@ -1,14 +1,12 @@
-use anyhow::Context;
 use array_to_map_transform::do_array_to_map_transform;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{Cursor, Write};
 use walk::walk_ty;
 
 mod array_to_map_transform;
 mod de;
-mod oxc_find;
+pub mod oxc_find;
 mod walk;
 
 #[cfg(test)]
@@ -828,30 +826,15 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
     Ok(())
 }
 
-// changes all arrays with varint countType and values of compound {key, value} to Map<key, value>
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn json2ts(json: String) -> String {
+    let p: Protocol = serde_json::from_str(&json).unwrap();
+    let mut file = Cursor::new(Vec::new());
+    print_to_writer(p, &mut file).unwrap();
+    String::from_utf8(file.into_inner()).unwrap()
+}
 
-fn main() -> anyhow::Result<()> {
-    // oxc_find::find();
-
-    let protocol_txt = include_str!("protocol.json");
-
-    let p: Protocol =
-        serde_json::from_str(protocol_txt).context("failed to parse protocol.json file")?;
-
-    std::fs::remove_file("protocol.ts")?;
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        // .truncate(true)
-        .open("protocol.ts")?;
-
-    // let mut buffer = Cursor::new(Vec::new()); // Cursor around Vec<u8>
-    // let result = String::from_utf8(buffer.into_inner())?; // Convert Vec<u8> to String
-
-    print_to_writer(p, &mut file)?;
-
-    // println!("{}", result);
-
-    Ok(())
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn ts2locs(s: String) -> String {
+    oxc_find::find(s).unwrap()
 }
