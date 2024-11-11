@@ -499,7 +499,8 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
                 fields
                     .iter()
                     .map(|x| format!(
-                        "{{ name: \"{}\", size: {}, signed: {} }}",
+                        "{{
+                        name: \"{}\", size: {}, signed: {} }}",
                         x.name, x.size, x.signed
                     ))
                     .collect::<Vec<_>>()
@@ -512,7 +513,8 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
                 fields.sort_by_key(|x| x.0.as_str());
 
                 format!(
-                    "{{ {}; _: {} }} /* .get({}) */",
+                    "{{
+                    {}; _: {} }} /* .get({}) */",
                     fields
                         .iter()
                         .map(|x| format!("\"{}\": {}", x.0, print_ty(&x.1, anon)))
@@ -535,7 +537,8 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
                 mappings.sort_by_key(|x| x.0.clone());
 
                 format!(
-                    "{{ {}; _ : Void; }}[{}] /* mapper */",
+                    "{{
+                    {}; _ : Void; }}[{}] /* mapper */",
                     mappings
                         .iter()
                         .map(|x| format!("{}: \"{}\"", x.0, x.1))
@@ -574,7 +577,8 @@ fn print_ty(ty: &Ty, anon: &mut u32) -> String {
             });
 
             format!(
-                "{{ {} }}",
+                "{{
+                {} }}",
                 fields
                     .iter()
                     .map(|x| match x {
