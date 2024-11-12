@@ -1,4 +1,9 @@
-
+---
+source: src/lib.rs
+expression: result
+input_file: minecraft-data/data/pc/1.20.5/protocol.json
+snapshot_kind: text
+---
 type VarInt = never;
 // type f64 = never;
 // type i16 = never;
@@ -100,10 +105,6 @@ type arrayWithLengthOffset = never /* native */
 
 
 type ByteArray = Buffer<{ countType: VarInt }>
-
-
-type vec2f = {
-                x: f32, y: f32 }
 
 
 type vec3f = {
@@ -223,10 +224,7 @@ type Particle = {
                     "block": VarInt ;"block_marker": VarInt ;"falling_dust": VarInt ;"dust_pillar": VarInt ;"dust": {
                 red: f32, green: f32, blue: f32, scale: f32 } ;"dust_color_transition": {
                 fromRed: f32, fromGreen: f32, fromBlue: f32, scale: f32, toRed: f32, toGreen: f32, toBlue: f32 } ;"entity_effect": i32 ;"item": Slot ;"sculk_charge": f32 ;"shriek": VarInt ;"vibration": {
-                position_type: {
-                    0: "block"; 1: "entity"; _ : Void; }[] /* mapper */, position: {
-                    "block": position ;"entity": {
-                entityId: VarInt, entity_eye_height: f32 }; _: Void } /* .get(position_type) */, ticks: VarInt }; _: Void } /* .get(type) */ }
+                position: String_, entityId: VarInt }; _: Void } /* .get(type) */ }
 
 
 type ingredient = Slot[]
@@ -256,11 +254,7 @@ type entityMetadataEntry = {
                     0: "byte"; 1: "int"; 2: "long"; 3: "float"; 4: "string"; 5: "component"; 6: "optional_component"; 7: "item_stack"; 8: "boolean"; 9: "rotations"; 10: "block_pos"; 11: "optional_block_pos"; 12: "direction"; 13: "optional_uuid"; 14: "block_state"; 15: "optional_block_state"; 16: "compound_tag"; 17: "particle"; 18: "particles"; 19: "villager_data"; 20: "optional_unsigned_int"; 21: "pose"; 22: "cat_variant"; 23: "wolf_variant"; 24: "frog_variant"; 25: "optional_global_pos"; 26: "painting_variant"; 27: "sniffer_state"; 28: "armadillo_state"; 29: "vector3"; 30: "quaternion"; _ : Void; }[] /* mapper */, value: {
                     "byte": i8 ;"int": VarInt ;"long": varlong ;"float": f32 ;"string": String_ ;"component": anonymousNbt ;"optional_component": option<anonymousNbt> ;"item_stack": Slot ;"boolean": bool ;"rotations": {
                 pitch: f32, yaw: f32, roll: f32 } ;"block_pos": position ;"optional_block_pos": option<position> ;"direction": VarInt ;"optional_uuid": option<UUID> ;"block_state": VarInt ;"optional_block_state": optvarint ;"compound_tag": anonymousNbt ;"particle": Particle ;"particles": Particle[] ;"villager_data": {
-                villagerType: VarInt, villagerProfession: VarInt, level: VarInt } ;"optional_unsigned_int": optvarint ;"pose": VarInt ;"cat_variant": VarInt ;"wolf_variant": {
-                wildTexture: String_, tameTexture: String_, angryTexture: String_, maybeInputLength: VarInt, biomeLocation: {
-                    "0": String_; _: Void } /* .get(maybeInputLength) */, biomeHolders: {
-                    "0": Void; _: arrayWithLengthOffset } /* .get(maybeInputLength) */ } ;"frog_variant": VarInt ;"optional_global_pos": option<String_> ;"painting_variant": {
-                width: VarInt, height: VarInt, assetId: String_ } ;"sniffer_state": VarInt ;"armadillo_state": VarInt ;"vector3": vec3f ;"quaternion": vec4f; _: Void } /* .get(type) */ }
+                villagerType: VarInt, villagerProfession: VarInt, level: VarInt } ;"optional_unsigned_int": optvarint ;"pose": VarInt ;"cat_variant": VarInt ;"wolf_variant": VarInt ;"frog_variant": VarInt ;"optional_global_pos": option<String_> ;"painting_variant": VarInt ;"sniffer_state": VarInt ;"armadillo_state": VarInt ;"vector3": vec3f ;"quaternion": vec4f; _: Void } /* .get(type) */ }
 
 
 type entityMetadata = entityMetadataLoop<{ ty: entityMetadataEntry, endVal: 255 }>
@@ -364,21 +358,6 @@ type packet_common_cookie_response = {
 type packet_common_select_known_packs = {
                 packs: {
                 namespace: String_, id: String_, version: String_ }[] }
-
-
-type packet_common_custom_report_details = {
-                details: Record_<String_, String_> }
-
-
-type ServerLinkType = {
-                    0: "bug_report"; 1: "community_guidelines"; 2: "support"; 3: "status"; 4: "feedback"; 5: "community"; 6: "website"; 7: "forums"; 8: "news"; 9: "announcements"; _ : Void; }[] /* mapper */
-
-
-type packet_common_server_links = {
-                links: {
-                hasKnownType: bool, knownType: {
-                    "true": ServerLinkType; _: Void } /* .get(hasKnownType) */, unknownType: {
-                    "false": anonymousNbt; _: Void } /* .get(hasKnownType) */, link: String_ }[] }
 
 namespace handshaking.to_client {
 
@@ -594,9 +573,9 @@ interface packet_tags {
 
 interface packet {
 	name: {
-                    0x00: "cookie_request"; 0x01: "custom_payload"; 0x02: "disconnect"; 0x03: "finish_configuration"; 0x04: "keep_alive"; 0x05: "ping"; 0x06: "reset_chat"; 0x07: "registry_data"; 0x08: "remove_resource_pack"; 0x09: "add_resource_pack"; 0x0a: "store_cookie"; 0x0b: "transfer"; 0x0c: "feature_flags"; 0x0d: "tags"; 0x0e: "select_known_packs"; 0x0f: "custom_report_details"; 0x10: "server_links"; _ : Void; }[] /* mapper */,
+                    0x00: "cookie_request"; 0x01: "custom_payload"; 0x02: "disconnect"; 0x03: "finish_configuration"; 0x04: "keep_alive"; 0x05: "ping"; 0x06: "reset_chat"; 0x07: "registry_data"; 0x08: "remove_resource_pack"; 0x09: "add_resource_pack"; 0x0a: "store_cookie"; 0x0b: "transfer"; 0x0c: "feature_flags"; 0x0d: "tags"; 0x0e: "select_known_packs"; _ : Void; }[] /* mapper */,
 	params: {
-                    "cookie_request": packet_common_cookie_request ;"custom_payload": packet_custom_payload ;"disconnect": packet_disconnect ;"finish_configuration": packet_finish_configuration ;"keep_alive": packet_keep_alive ;"ping": packet_ping ;"reset_chat": packet_reset_chat ;"registry_data": packet_registry_data ;"remove_resource_pack": packet_remove_resource_pack ;"add_resource_pack": packet_add_resource_pack ;"store_cookie": packet_common_store_cookie ;"transfer": packet_common_transfer ;"feature_flags": packet_feature_flags ;"tags": packet_tags ;"select_known_packs": packet_common_select_known_packs ;"custom_report_details": packet_common_custom_report_details ;"server_links": packet_common_server_links; _: Void } /* .get(name) */,
+                    "cookie_request": packet_common_cookie_request ;"custom_payload": packet_custom_payload ;"disconnect": packet_disconnect ;"finish_configuration": packet_finish_configuration ;"keep_alive": packet_keep_alive ;"ping": packet_ping ;"reset_chat": packet_reset_chat ;"registry_data": packet_registry_data ;"remove_resource_pack": packet_remove_resource_pack ;"add_resource_pack": packet_add_resource_pack ;"store_cookie": packet_common_store_cookie ;"transfer": packet_common_transfer ;"feature_flags": packet_feature_flags ;"tags": packet_tags ;"select_known_packs": packet_common_select_known_packs; _: Void } /* .get(name) */,
 }
 
 }
@@ -643,9 +622,9 @@ interface packet_resource_pack_receive {
 
 interface packet {
 	name: {
-                    0x00: "settings"; 0x01: "cookie_response"; 0x02: "custom_payload"; 0x03: "finish_configuration"; 0x04: "keep_alive"; 0x05: "pong"; 0x06: "resource_pack_receive"; 0x07: "select_known_packs"; 0x08: "custom_report_details"; 0x09: "server_links"; _ : Void; }[] /* mapper */,
+                    0x00: "settings"; 0x01: "cookie_response"; 0x02: "custom_payload"; 0x03: "finish_configuration"; 0x04: "keep_alive"; 0x05: "pong"; 0x06: "resource_pack_receive"; 0x07: "select_known_packs"; _ : Void; }[] /* mapper */,
 	params: {
-                    "settings": packet_settings ;"cookie_response": packet_common_cookie_response ;"custom_payload": packet_custom_payload ;"finish_configuration": packet_finish_configuration ;"keep_alive": packet_keep_alive ;"pong": packet_pong ;"resource_pack_receive": packet_resource_pack_receive ;"select_known_packs": packet_common_select_known_packs ;"custom_report_details": packet_common_custom_report_details ;"server_links": packet_common_server_links; _: Void } /* .get(name) */,
+                    "settings": packet_settings ;"cookie_response": packet_common_cookie_response ;"custom_payload": packet_custom_payload ;"finish_configuration": packet_finish_configuration ;"keep_alive": packet_keep_alive ;"pong": packet_pong ;"resource_pack_receive": packet_resource_pack_receive ;"select_known_packs": packet_common_select_known_packs; _: Void } /* .get(name) */,
 }
 
 }
@@ -867,27 +846,10 @@ interface packet_kick_disconnect {
 	reason: anonymousNbt,
 }
 
-type ChatTypeParameterType = {
-                    0: "content"; 1: "sender"; 2: "target"; _ : Void; }[] /* mapper */;
-
-interface ChatType {
-	translationKey: String_,
-	parameters: ChatTypeParameterType[],
-	style: anonymousNbt,
-}
-
-
-interface ChatTypes {
-	registryIndex: VarInt,
-	_anon_9: {
-                    "0": {
-                chat: ChatType, narration: ChatType }; _: Void } /* .get(registryIndex) */
-}
-
 
 interface packet_profileless_chat {
 	message: anonymousNbt,
-	type: ChatTypes,
+	type: VarInt,
 	name: anonymousNbt,
 	target: option<anonymousNbt>,
 }
@@ -913,7 +875,7 @@ interface packet_explosion {
 	small_explosion_particle: Particle,
 	large_explosion_particle: Particle,
 	soundId: VarInt,
-	_anon_10: {
+	_anon_9: {
                     "0": {
                 soundName: String_, range: option<f32> }; _: {
                  } } /* .get(soundId) */
@@ -1147,7 +1109,7 @@ interface packet_player_chat {
 	filterType: VarInt,
 	filterTypeMask: {
                     "2": i64[]; _: Void } /* .get(filterType) */,
-	type: ChatTypes,
+	type: VarInt,
 	networkName: anonymousNbt,
 	networkTargetName: option<anonymousNbt>,
 }
@@ -1260,7 +1222,7 @@ interface packet_add_resource_pack {
 
 interface packet_respawn {
 	worldState: SpawnInfo,
-	copyMetadata: u8,
+	copyMetadata: bool,
 }
 
 
@@ -1497,7 +1459,8 @@ interface packet_sound_effect {
 	soundId: VarInt,
 	soundEvent: {
                     "0": {
-                resource: String_, range: option<f32> }; _: Void } /* .get(soundId) */,
+                resource: String_, range: option<f32> }; _: {
+                 } } /* .get(soundId) */,
 	soundCategory: soundSource,
 	x: i32,
 	y: i32,
@@ -1590,7 +1553,7 @@ interface packet_entity_update_attributes {
 	properties: {
                 key: {
                     0: "generic.armor"; 1: "generic.armor_toughness"; 2: "generic.attack_damage"; 3: "generic.attack_knockback"; 4: "generic.attack_speed"; 5: "player.block_break_speed"; 6: "player.block_interaction_range"; 7: "player.entity_interaction_range"; 8: "generic.fall_damage_multiplier"; 9: "generic.flying_speed"; 10: "generic.follow_range"; 11: "generic.gravity"; 12: "generic.jump_strength"; 13: "generic.knockback_resistance"; 14: "generic.luck"; 15: "generic.max_absorption"; 16: "generic.max_health"; 17: "generic.movement_speed"; 18: "generic.safe_fall_distance"; 19: "generic.scale"; 20: "zombie.spawn_reinforcements"; 21: "generic.step_height"; _ : Void; }[] /* mapper */, value: f64, modifiers: {
-                uuid: String_, amount: f64, operation: i8 }[] }[],
+                uuid: UUID, amount: f64, operation: i8 }[] }[],
 }
 
 
@@ -1624,7 +1587,7 @@ interface packet_tags {
 
 interface packet_set_projectile_power {
 	id: VarInt,
-	accelerationPower: f64,
+	power: vec3f64,
 }
 
 
@@ -2040,7 +2003,6 @@ interface packet_block_place {
 interface packet_use_item {
 	hand: VarInt,
 	sequence: VarInt,
-	rotation: vec2f,
 }
 
 

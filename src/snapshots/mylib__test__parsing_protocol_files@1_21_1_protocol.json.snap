@@ -1,4 +1,9 @@
-
+---
+source: src/lib.rs
+expression: result
+input_file: src/inputs/1_21_1_protocol.json
+snapshot_kind: text
+---
 type VarInt = never;
 // type f64 = never;
 // type i16 = never;

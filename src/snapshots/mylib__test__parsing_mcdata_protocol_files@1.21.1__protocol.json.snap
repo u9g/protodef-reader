@@ -1,4 +1,9 @@
-
+---
+source: src/lib.rs
+expression: result
+input_file: minecraft-data/data/pc/1.21.1/protocol.json
+snapshot_kind: text
+---
 type VarInt = never;
 // type f64 = never;
 // type i16 = never;

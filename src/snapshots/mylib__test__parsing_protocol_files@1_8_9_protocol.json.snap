@@ -1,0 +1,1061 @@
+---
+source: src/lib.rs
+expression: result
+input_file: src/inputs/1_8_9_protocol.json
+snapshot_kind: text
+---
+type VarInt = never;
+// type f64 = never;
+// type i16 = never;
+// type i8 = never;
+// type i32 = never;
+// type UUID = never;
+// type EntityMetadata = never;
+// type Position = never;
+// type u8 = never;
+// type bool = never;
+// type Slot = never;
+// type f32 = never;
+type Void = never;
+// type i64 = never;
+// type OptionalNbt = never;
+type RestBuffer = never;
+// type Nbt = never;
+// type VarLong = never;
+// type u16 = never;
+type Arr<T> = never;
+type BitField<T> = never;
+type Buffer<T> = never;
+type Record_<K, V, Size = varint> = never;
+type topBitSetTerminatedArray<T> = never;
+type pstring<T> = never;
+type entityMetadataLoop<T> = never;
+type option<T> = never;
+type String_ = never;
+type ParticleData<T> = never;
+
+
+type varint = never /* native */
+
+
+type varlong = never /* native */
+
+
+type u16 = never /* native */
+
+
+type u8 = never /* native */
+
+
+type i64 = never /* native */
+
+
+type buffer = never /* native */
+
+
+type i32 = never /* native */
+
+
+type i8 = never /* native */
+
+
+type bool = never /* native */
+
+
+type i16 = never /* native */
+
+
+type f32 = never /* native */
+
+
+type f64 = never /* native */
+
+
+type UUID = never /* native */
+
+
+type bitfield = never /* native */
+
+
+type container = never /* native */
+
+
+type array = never /* native */
+
+
+type restBuffer = never /* native */
+
+
+type nbt = never /* native */
+
+
+type optionalNbt = never /* native */
+
+
+type slot = {
+                blockId: i16, _anon_0: {
+                    "-1": Void; _: {
+                itemCount: i8, itemDamage: i16, nbtData: OptionalNbt } } /* .get(blockId) */ }
+
+
+type position = BitField<{ fields: [{
+                        name: "x", size: 26, signed: true }, {
+                        name: "y", size: 12, signed: true }, {
+                        name: "z", size: 26, signed: true }] }>
+
+
+type entityMetadataItem = {
+                    "0": i8 ;"1": i16 ;"2": i32 ;"3": f32 ;"4": String_ ;"5": Slot ;"6": {
+                x: i32, y: i32, z: i32 } ;"7": {
+                pitch: f32, yaw: f32, roll: f32 }; _: Void } /* .get($compareTo) */
+
+
+type entityMetadata = entityMetadataLoop<{ ty: {
+                _anon_1: BitField<{ fields: [{
+                        name: "type", size: 3, signed: false }, {
+                        name: "key", size: 5, signed: false }] }>, value: entityMetadataItem<{ compareTo: "type" }> }, endVal: 127 }>
+
+namespace handshaking.to_client {
+
+interface packet {
+	name: /* empty mapper */ any,
+	params: /* empty switch */ any,
+}
+
+}
+namespace handshaking.to_server {
+
+interface packet_set_protocol {
+	protocolVersion: VarInt,
+	serverHost: String_,
+	serverPort: u16,
+	nextState: VarInt,
+}
+
+
+interface packet_legacy_server_list_ping {
+	payload: u8,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "set_protocol"; 0xfe: "legacy_server_list_ping"; _ : Void; }[] /* mapper */,
+	params: {
+                    "set_protocol": packet_set_protocol ;"legacy_server_list_ping": packet_legacy_server_list_ping; _: Void } /* .get(name) */,
+}
+
+}
+namespace status.to_client {
+
+interface packet_server_info {
+	response: String_,
+}
+
+
+interface packet_ping {
+	time: i64,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "server_info"; 0x01: "ping"; _ : Void; }[] /* mapper */,
+	params: {
+                    "server_info": packet_server_info ;"ping": packet_ping; _: Void } /* .get(name) */,
+}
+
+}
+namespace status.to_server {
+
+interface packet_ping_start {
+
+}
+
+
+interface packet_ping {
+	time: i64,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "ping_start"; 0x01: "ping"; _ : Void; }[] /* mapper */,
+	params: {
+                    "ping_start": packet_ping_start ;"ping": packet_ping; _: Void } /* .get(name) */,
+}
+
+}
+namespace login.to_client {
+
+interface packet_disconnect {
+	reason: String_,
+}
+
+
+interface packet_encryption_begin {
+	serverId: String_,
+	publicKey: Buffer<{ countType: VarInt }>,
+	verifyToken: Buffer<{ countType: VarInt }>,
+}
+
+
+interface packet_success {
+	uuid: String_,
+	username: String_,
+}
+
+
+interface packet_compress {
+	threshold: VarInt,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "disconnect"; 0x01: "encryption_begin"; 0x02: "success"; 0x03: "compress"; _ : Void; }[] /* mapper */,
+	params: {
+                    "disconnect": packet_disconnect ;"encryption_begin": packet_encryption_begin ;"success": packet_success ;"compress": packet_compress; _: Void } /* .get(name) */,
+}
+
+}
+namespace login.to_server {
+
+interface packet_login_start {
+	username: String_,
+}
+
+
+interface packet_encryption_begin {
+	sharedSecret: Buffer<{ countType: VarInt }>,
+	verifyToken: Buffer<{ countType: VarInt }>,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "login_start"; 0x01: "encryption_begin"; _ : Void; }[] /* mapper */,
+	params: {
+                    "login_start": packet_login_start ;"encryption_begin": packet_encryption_begin; _: Void } /* .get(name) */,
+}
+
+}
+namespace play.to_client {
+
+interface packet_keep_alive {
+	keepAliveId: VarInt,
+}
+
+
+interface packet_login {
+	entityId: i32,
+	gameMode: u8,
+	dimension: i8,
+	difficulty: u8,
+	maxPlayers: u8,
+	levelType: String_,
+	reducedDebugInfo: bool,
+}
+
+
+interface packet_chat {
+	message: String_,
+	position: i8,
+}
+
+
+interface packet_update_time {
+	age: i64,
+	time: i64,
+}
+
+
+interface packet_entity_equipment {
+	entityId: VarInt,
+	slot: i16,
+	item: Slot,
+}
+
+
+interface packet_spawn_position {
+	location: position,
+}
+
+
+interface packet_update_health {
+	health: f32,
+	food: VarInt,
+	foodSaturation: f32,
+}
+
+
+interface packet_respawn {
+	dimension: i32,
+	difficulty: u8,
+	gamemode: u8,
+	levelType: String_,
+}
+
+
+interface packet_position {
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: f32,
+	pitch: f32,
+	flags: i8,
+}
+
+
+interface packet_held_item_slot {
+	slot: i8,
+}
+
+
+interface packet_bed {
+	entityId: VarInt,
+	location: position,
+}
+
+
+interface packet_animation {
+	entityId: VarInt,
+	animation: u8,
+}
+
+
+interface packet_named_entity_spawn {
+	entityId: VarInt,
+	playerUUID: UUID,
+	x: i32,
+	y: i32,
+	z: i32,
+	yaw: i8,
+	pitch: i8,
+	currentItem: i16,
+	metadata: entityMetadata,
+}
+
+
+interface packet_collect {
+	collectedEntityId: VarInt,
+	collectorEntityId: VarInt,
+}
+
+
+interface packet_spawn_entity {
+	entityId: VarInt,
+	type: i8,
+	x: i32,
+	y: i32,
+	z: i32,
+	pitch: i8,
+	yaw: i8,
+	objectData: {
+                intField: i32, velocityX: {
+                    "0": Void; _: i16 } /* .get(intField) */, velocityY: {
+                    "0": Void; _: i16 } /* .get(intField) */, velocityZ: {
+                    "0": Void; _: i16 } /* .get(intField) */ },
+}
+
+
+interface packet_spawn_entity_living {
+	entityId: VarInt,
+	type: u8,
+	x: i32,
+	y: i32,
+	z: i32,
+	yaw: i8,
+	pitch: i8,
+	headPitch: i8,
+	velocityX: i16,
+	velocityY: i16,
+	velocityZ: i16,
+	metadata: entityMetadata,
+}
+
+
+interface packet_spawn_entity_painting {
+	entityId: VarInt,
+	title: String_,
+	location: position,
+	direction: u8,
+}
+
+
+interface packet_spawn_entity_experience_orb {
+	entityId: VarInt,
+	x: i32,
+	y: i32,
+	z: i32,
+	count: i16,
+}
+
+
+interface packet_entity_velocity {
+	entityId: VarInt,
+	velocityX: i16,
+	velocityY: i16,
+	velocityZ: i16,
+}
+
+
+interface packet_entity_destroy {
+	entityIds: VarInt[],
+}
+
+
+interface packet_entity {
+	entityId: VarInt,
+}
+
+
+interface packet_rel_entity_move {
+	entityId: VarInt,
+	dX: i8,
+	dY: i8,
+	dZ: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity_look {
+	entityId: VarInt,
+	yaw: i8,
+	pitch: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity_move_look {
+	entityId: VarInt,
+	dX: i8,
+	dY: i8,
+	dZ: i8,
+	yaw: i8,
+	pitch: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity_teleport {
+	entityId: VarInt,
+	x: i32,
+	y: i32,
+	z: i32,
+	yaw: i8,
+	pitch: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity_head_rotation {
+	entityId: VarInt,
+	headYaw: i8,
+}
+
+
+interface packet_entity_status {
+	entityId: i32,
+	entityStatus: i8,
+}
+
+
+interface packet_attach_entity {
+	entityId: i32,
+	vehicleId: i32,
+	leash: bool,
+}
+
+
+interface packet_entity_metadata {
+	entityId: VarInt,
+	metadata: entityMetadata,
+}
+
+
+interface packet_entity_effect {
+	entityId: VarInt,
+	effectId: i8,
+	amplifier: i8,
+	duration: VarInt,
+	hideParticles: bool,
+}
+
+
+interface packet_remove_entity_effect {
+	entityId: VarInt,
+	effectId: i8,
+}
+
+
+interface packet_experience {
+	experienceBar: f32,
+	level: VarInt,
+	totalExperience: VarInt,
+}
+
+
+interface packet_update_attributes {
+	entityId: VarInt,
+	properties: {
+                key: String_, value: f64, modifiers: {
+                uuid: UUID, amount: f64, operation: i8 }[] }[i32],
+}
+
+
+interface packet_map_chunk {
+	x: i32,
+	z: i32,
+	groundUp: bool,
+	bitMap: u16,
+	chunkData: Buffer<{ countType: VarInt }>,
+}
+
+
+interface packet_multi_block_change {
+	chunkX: i32,
+	chunkZ: i32,
+	records: {
+                horizontalPos: u8, y: u8, blockId: VarInt }[],
+}
+
+
+interface packet_block_change {
+	location: position,
+	type: VarInt,
+}
+
+
+interface packet_block_action {
+	location: position,
+	byte1: u8,
+	byte2: u8,
+	blockId: VarInt,
+}
+
+
+interface packet_block_break_animation {
+	entityId: VarInt,
+	location: position,
+	destroyStage: i8,
+}
+
+
+interface packet_map_chunk_bulk {
+	skyLightSent: bool,
+	meta: {
+                x: i32, z: i32, bitMap: u16 }[],
+	data: RestBuffer,
+}
+
+
+interface packet_explosion {
+	x: f32,
+	y: f32,
+	z: f32,
+	radius: f32,
+	affectedBlockOffsets: {
+                x: i8, y: i8, z: i8 }[i32],
+	playerMotionX: f32,
+	playerMotionY: f32,
+	playerMotionZ: f32,
+}
+
+
+interface packet_world_event {
+	effectId: i32,
+	location: position,
+	data: i32,
+	global: bool,
+}
+
+
+interface packet_named_sound_effect {
+	soundName: String_,
+	x: i32,
+	y: i32,
+	z: i32,
+	volume: f32,
+	pitch: u8,
+}
+
+
+interface packet_world_particles {
+	particleId: i32,
+	longDistance: bool,
+	x: f32,
+	y: f32,
+	z: f32,
+	offsetX: f32,
+	offsetY: f32,
+	offsetZ: f32,
+	particleData: f32,
+	particles: i32,
+	data: {
+                    "36": Arr<{ arraySize: 2, elementType: VarInt }> ;"37": Arr<{ arraySize: 1, elementType: VarInt }> ;"38": Arr<{ arraySize: 1, elementType: VarInt }>; _: Void } /* .get(particleId) */,
+}
+
+
+interface packet_game_state_change {
+	reason: u8,
+	gameMode: f32,
+}
+
+
+interface packet_spawn_entity_weather {
+	entityId: VarInt,
+	type: i8,
+	x: i32,
+	y: i32,
+	z: i32,
+}
+
+
+interface packet_open_window {
+	windowId: u8,
+	inventoryType: String_,
+	windowTitle: String_,
+	slotCount: u8,
+	entityId: {
+                    "EntityHorse": i32; _: Void } /* .get(inventoryType) */,
+}
+
+
+interface packet_close_window {
+	windowId: u8,
+}
+
+
+interface packet_set_slot {
+	windowId: i8,
+	slot: i16,
+	item: Slot,
+}
+
+
+interface packet_window_items {
+	windowId: u8,
+	items: Slot[i16],
+}
+
+
+interface packet_craft_progress_bar {
+	windowId: u8,
+	property: i16,
+	value: i16,
+}
+
+
+interface packet_transaction {
+	windowId: i8,
+	action: i16,
+	accepted: bool,
+}
+
+
+interface packet_update_sign {
+	location: position,
+	text1: String_,
+	text2: String_,
+	text3: String_,
+	text4: String_,
+}
+
+
+interface packet_map {
+	itemDamage: VarInt,
+	scale: i8,
+	icons: {
+                directionAndType: i8, x: i8, z: i8 }[],
+	columns: i8,
+	rows: {
+                    "0": Void; _: i8 } /* .get(columns) */,
+	x: {
+                    "0": Void; _: i8 } /* .get(columns) */,
+	y: {
+                    "0": Void; _: i8 } /* .get(columns) */,
+	data: {
+                    "0": Void; _: Buffer<{ countType: VarInt }> } /* .get(columns) */,
+}
+
+
+interface packet_tile_entity_data {
+	location: position,
+	action: u8,
+	nbtData: OptionalNbt,
+}
+
+
+interface packet_open_sign_entity {
+	location: position,
+}
+
+
+interface packet_statistics {
+	entries: {
+                name: String_, value: VarInt }[],
+}
+
+
+interface packet_player_info {
+	action: VarInt,
+	data: {
+                UUID: UUID, name: {
+                    "0": String_; _: Void } /* .get(../action) */, properties: {
+                    "0": {
+                name: String_, value: String_, signature: option<String_> }[]; _: Void } /* .get(../action) */, gamemode: {
+                    "0": VarInt ;"1": VarInt; _: Void } /* .get(../action) */, ping: {
+                    "0": VarInt ;"2": VarInt; _: Void } /* .get(../action) */, displayName: {
+                    "0": option<String_> ;"3": option<String_>; _: Void } /* .get(../action) */ }[],
+}
+
+
+interface packet_abilities {
+	flags: i8,
+	flyingSpeed: f32,
+	walkingSpeed: f32,
+}
+
+
+interface packet_tab_complete {
+	matches: String_[],
+}
+
+
+interface packet_scoreboard_objective {
+	name: String_,
+	action: i8,
+	displayText: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(action) */,
+	type: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(action) */,
+}
+
+
+interface packet_scoreboard_score {
+	itemName: String_,
+	action: VarInt,
+	scoreName: String_,
+	value: {
+                    "1": Void; _: VarInt } /* .get(action) */,
+}
+
+
+interface packet_scoreboard_display_objective {
+	position: i8,
+	name: String_,
+}
+
+
+interface packet_scoreboard_team {
+	team: String_,
+	mode: i8,
+	name: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	prefix: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	suffix: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	friendlyFire: {
+                    "0": i8 ;"2": i8; _: Void } /* .get(mode) */,
+	nameTagVisibility: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	color: {
+                    "0": i8 ;"2": i8; _: Void } /* .get(mode) */,
+	players: {
+                    "0": String_[] ;"3": String_[] ;"4": String_[]; _: Void } /* .get(mode) */,
+}
+
+
+interface packet_custom_payload {
+	channel: String_,
+	data: RestBuffer,
+}
+
+
+interface packet_kick_disconnect {
+	reason: String_,
+}
+
+
+interface packet_difficulty {
+	difficulty: u8,
+}
+
+
+interface packet_combat_event {
+	event: VarInt,
+	duration: {
+                    "1": VarInt; _: Void } /* .get(event) */,
+	playerId: {
+                    "2": VarInt; _: Void } /* .get(event) */,
+	entityId: {
+                    "1": i32 ;"2": i32; _: Void } /* .get(event) */,
+	message: {
+                    "2": String_; _: Void } /* .get(event) */,
+}
+
+
+interface packet_camera {
+	cameraId: VarInt,
+}
+
+
+interface packet_world_border {
+	action: VarInt,
+	radius: {
+                    "0": f64; _: Void } /* .get(action) */,
+	x: {
+                    "2": f64 ;"3": f64; _: Void } /* .get(action) */,
+	z: {
+                    "2": f64 ;"3": f64; _: Void } /* .get(action) */,
+	old_radius: {
+                    "1": f64 ;"3": f64; _: Void } /* .get(action) */,
+	new_radius: {
+                    "1": f64 ;"3": f64; _: Void } /* .get(action) */,
+	speed: {
+                    "1": varlong ;"3": varlong; _: Void } /* .get(action) */,
+	portalBoundary: {
+                    "3": VarInt; _: Void } /* .get(action) */,
+	warning_time: {
+                    "3": VarInt ;"4": VarInt; _: Void } /* .get(action) */,
+	warning_blocks: {
+                    "3": VarInt ;"5": VarInt; _: Void } /* .get(action) */,
+}
+
+
+interface packet_title {
+	action: VarInt,
+	text: {
+                    "0": String_ ;"1": String_; _: Void } /* .get(action) */,
+	fadeIn: {
+                    "2": i32; _: Void } /* .get(action) */,
+	stay: {
+                    "2": i32; _: Void } /* .get(action) */,
+	fadeOut: {
+                    "2": i32; _: Void } /* .get(action) */,
+}
+
+
+interface packet_set_compression {
+	threshold: VarInt,
+}
+
+
+interface packet_playerlist_header {
+	header: String_,
+	footer: String_,
+}
+
+
+interface packet_resource_pack_send {
+	url: String_,
+	hash: String_,
+}
+
+
+interface packet_update_entity_nbt {
+	entityId: VarInt,
+	tag: Nbt,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "keep_alive"; 0x01: "login"; 0x02: "chat"; 0x03: "update_time"; 0x04: "entity_equipment"; 0x05: "spawn_position"; 0x06: "update_health"; 0x07: "respawn"; 0x08: "position"; 0x09: "held_item_slot"; 0x0a: "bed"; 0x0b: "animation"; 0x0c: "named_entity_spawn"; 0x0d: "collect"; 0x0e: "spawn_entity"; 0x0f: "spawn_entity_living"; 0x10: "spawn_entity_painting"; 0x11: "spawn_entity_experience_orb"; 0x12: "entity_velocity"; 0x13: "entity_destroy"; 0x14: "entity"; 0x15: "rel_entity_move"; 0x16: "entity_look"; 0x17: "entity_move_look"; 0x18: "entity_teleport"; 0x19: "entity_head_rotation"; 0x1a: "entity_status"; 0x1b: "attach_entity"; 0x1c: "entity_metadata"; 0x1d: "entity_effect"; 0x1e: "remove_entity_effect"; 0x1f: "experience"; 0x20: "update_attributes"; 0x21: "map_chunk"; 0x22: "multi_block_change"; 0x23: "block_change"; 0x24: "block_action"; 0x25: "block_break_animation"; 0x26: "map_chunk_bulk"; 0x27: "explosion"; 0x28: "world_event"; 0x29: "named_sound_effect"; 0x2a: "world_particles"; 0x2b: "game_state_change"; 0x2c: "spawn_entity_weather"; 0x2d: "open_window"; 0x2e: "close_window"; 0x2f: "set_slot"; 0x30: "window_items"; 0x31: "craft_progress_bar"; 0x32: "transaction"; 0x33: "update_sign"; 0x34: "map"; 0x35: "tile_entity_data"; 0x36: "open_sign_entity"; 0x37: "statistics"; 0x38: "player_info"; 0x39: "abilities"; 0x3a: "tab_complete"; 0x3b: "scoreboard_objective"; 0x3c: "scoreboard_score"; 0x3d: "scoreboard_display_objective"; 0x3e: "scoreboard_team"; 0x3f: "custom_payload"; 0x40: "kick_disconnect"; 0x41: "difficulty"; 0x42: "combat_event"; 0x43: "camera"; 0x44: "world_border"; 0x45: "title"; 0x46: "set_compression"; 0x47: "playerlist_header"; 0x48: "resource_pack_send"; 0x49: "update_entity_nbt"; _ : Void; }[] /* mapper */,
+	params: {
+                    "keep_alive": packet_keep_alive ;"login": packet_login ;"chat": packet_chat ;"update_time": packet_update_time ;"entity_equipment": packet_entity_equipment ;"spawn_position": packet_spawn_position ;"update_health": packet_update_health ;"respawn": packet_respawn ;"position": packet_position ;"held_item_slot": packet_held_item_slot ;"bed": packet_bed ;"animation": packet_animation ;"named_entity_spawn": packet_named_entity_spawn ;"collect": packet_collect ;"spawn_entity": packet_spawn_entity ;"spawn_entity_living": packet_spawn_entity_living ;"spawn_entity_painting": packet_spawn_entity_painting ;"spawn_entity_experience_orb": packet_spawn_entity_experience_orb ;"entity_velocity": packet_entity_velocity ;"entity_destroy": packet_entity_destroy ;"entity": packet_entity ;"rel_entity_move": packet_rel_entity_move ;"entity_look": packet_entity_look ;"entity_move_look": packet_entity_move_look ;"entity_teleport": packet_entity_teleport ;"entity_head_rotation": packet_entity_head_rotation ;"entity_status": packet_entity_status ;"attach_entity": packet_attach_entity ;"entity_metadata": packet_entity_metadata ;"entity_effect": packet_entity_effect ;"remove_entity_effect": packet_remove_entity_effect ;"experience": packet_experience ;"update_attributes": packet_update_attributes ;"map_chunk": packet_map_chunk ;"multi_block_change": packet_multi_block_change ;"block_change": packet_block_change ;"block_action": packet_block_action ;"block_break_animation": packet_block_break_animation ;"map_chunk_bulk": packet_map_chunk_bulk ;"explosion": packet_explosion ;"world_event": packet_world_event ;"named_sound_effect": packet_named_sound_effect ;"world_particles": packet_world_particles ;"game_state_change": packet_game_state_change ;"spawn_entity_weather": packet_spawn_entity_weather ;"open_window": packet_open_window ;"close_window": packet_close_window ;"set_slot": packet_set_slot ;"window_items": packet_window_items ;"craft_progress_bar": packet_craft_progress_bar ;"transaction": packet_transaction ;"update_sign": packet_update_sign ;"map": packet_map ;"tile_entity_data": packet_tile_entity_data ;"open_sign_entity": packet_open_sign_entity ;"statistics": packet_statistics ;"player_info": packet_player_info ;"abilities": packet_abilities ;"tab_complete": packet_tab_complete ;"scoreboard_objective": packet_scoreboard_objective ;"scoreboard_score": packet_scoreboard_score ;"scoreboard_display_objective": packet_scoreboard_display_objective ;"scoreboard_team": packet_scoreboard_team ;"custom_payload": packet_custom_payload ;"kick_disconnect": packet_kick_disconnect ;"difficulty": packet_difficulty ;"combat_event": packet_combat_event ;"camera": packet_camera ;"world_border": packet_world_border ;"title": packet_title ;"set_compression": packet_set_compression ;"playerlist_header": packet_playerlist_header ;"resource_pack_send": packet_resource_pack_send ;"update_entity_nbt": packet_update_entity_nbt; _: Void } /* .get(name) */,
+}
+
+}
+namespace play.to_server {
+
+interface packet_keep_alive {
+	keepAliveId: VarInt,
+}
+
+
+interface packet_chat {
+	message: String_,
+}
+
+
+interface packet_use_entity {
+	target: VarInt,
+	mouse: VarInt,
+	x: {
+                    "2": f32; _: Void } /* .get(mouse) */,
+	y: {
+                    "2": f32; _: Void } /* .get(mouse) */,
+	z: {
+                    "2": f32; _: Void } /* .get(mouse) */,
+}
+
+
+interface packet_flying {
+	onGround: bool,
+}
+
+
+interface packet_position {
+	x: f64,
+	y: f64,
+	z: f64,
+	onGround: bool,
+}
+
+
+interface packet_look {
+	yaw: f32,
+	pitch: f32,
+	onGround: bool,
+}
+
+
+interface packet_position_look {
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: f32,
+	pitch: f32,
+	onGround: bool,
+}
+
+
+interface packet_block_dig {
+	status: VarInt,
+	location: position,
+	face: i8,
+}
+
+
+interface packet_block_place {
+	location: position,
+	direction: i8,
+	heldItem: Slot,
+	cursorX: i8,
+	cursorY: i8,
+	cursorZ: i8,
+}
+
+
+interface packet_held_item_slot {
+	slotId: i16,
+}
+
+
+interface packet_arm_animation {
+
+}
+
+
+interface packet_entity_action {
+	entityId: VarInt,
+	actionId: VarInt,
+	jumpBoost: VarInt,
+}
+
+
+interface packet_steer_vehicle {
+	sideways: f32,
+	forward: f32,
+	jump: u8,
+}
+
+
+interface packet_close_window {
+	windowId: u8,
+}
+
+
+interface packet_window_click {
+	windowId: u8,
+	slot: i16,
+	mouseButton: i8,
+	action: i16,
+	mode: i8,
+	item: Slot,
+}
+
+
+interface packet_transaction {
+	windowId: i8,
+	action: i16,
+	accepted: bool,
+}
+
+
+interface packet_set_creative_slot {
+	slot: i16,
+	item: Slot,
+}
+
+
+interface packet_enchant_item {
+	windowId: i8,
+	enchantment: i8,
+}
+
+
+interface packet_update_sign {
+	location: position,
+	text1: String_,
+	text2: String_,
+	text3: String_,
+	text4: String_,
+}
+
+
+interface packet_abilities {
+	flags: i8,
+	flyingSpeed: f32,
+	walkingSpeed: f32,
+}
+
+
+interface packet_tab_complete {
+	text: String_,
+	block: option<position>,
+}
+
+
+interface packet_settings {
+	locale: String_,
+	viewDistance: i8,
+	chatFlags: i8,
+	chatColors: bool,
+	skinParts: u8,
+}
+
+
+interface packet_client_command {
+	payload: VarInt,
+}
+
+
+interface packet_custom_payload {
+	channel: String_,
+	data: RestBuffer,
+}
+
+
+interface packet_spectate {
+	target: UUID,
+}
+
+
+interface packet_resource_pack_receive {
+	hash: String_,
+	result: VarInt,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "keep_alive"; 0x01: "chat"; 0x02: "use_entity"; 0x03: "flying"; 0x04: "position"; 0x05: "look"; 0x06: "position_look"; 0x07: "block_dig"; 0x08: "block_place"; 0x09: "held_item_slot"; 0x0a: "arm_animation"; 0x0b: "entity_action"; 0x0c: "steer_vehicle"; 0x0d: "close_window"; 0x0e: "window_click"; 0x0f: "transaction"; 0x10: "set_creative_slot"; 0x11: "enchant_item"; 0x12: "update_sign"; 0x13: "abilities"; 0x14: "tab_complete"; 0x15: "settings"; 0x16: "client_command"; 0x17: "custom_payload"; 0x18: "spectate"; 0x19: "resource_pack_receive"; _ : Void; }[] /* mapper */,
+	params: {
+                    "keep_alive": packet_keep_alive ;"chat": packet_chat ;"use_entity": packet_use_entity ;"flying": packet_flying ;"position": packet_position ;"look": packet_look ;"position_look": packet_position_look ;"block_dig": packet_block_dig ;"block_place": packet_block_place ;"held_item_slot": packet_held_item_slot ;"arm_animation": packet_arm_animation ;"entity_action": packet_entity_action ;"steer_vehicle": packet_steer_vehicle ;"close_window": packet_close_window ;"window_click": packet_window_click ;"transaction": packet_transaction ;"set_creative_slot": packet_set_creative_slot ;"enchant_item": packet_enchant_item ;"update_sign": packet_update_sign ;"abilities": packet_abilities ;"tab_complete": packet_tab_complete ;"settings": packet_settings ;"client_command": packet_client_command ;"custom_payload": packet_custom_payload ;"spectate": packet_spectate ;"resource_pack_receive": packet_resource_pack_receive; _: Void } /* .get(name) */,
+}
+
+}

@@ -1,0 +1,1128 @@
+---
+source: src/lib.rs
+expression: result
+input_file: minecraft-data/data/pc/1.9.2/protocol.json
+snapshot_kind: text
+---
+type VarInt = never;
+// type f64 = never;
+// type i16 = never;
+// type i8 = never;
+// type i32 = never;
+// type UUID = never;
+// type EntityMetadata = never;
+// type Position = never;
+// type u8 = never;
+// type bool = never;
+// type Slot = never;
+// type f32 = never;
+type Void = never;
+// type i64 = never;
+// type OptionalNbt = never;
+type RestBuffer = never;
+// type Nbt = never;
+// type VarLong = never;
+// type u16 = never;
+type Arr<T> = never;
+type BitField<T> = never;
+type Buffer<T> = never;
+type Record_<K, V, Size = varint> = never;
+type topBitSetTerminatedArray<T> = never;
+type pstring<T> = never;
+type entityMetadataLoop<T> = never;
+type option<T> = never;
+type String_ = never;
+type ParticleData<T> = never;
+
+
+type varint = never /* native */
+
+
+type varlong = never /* native */
+
+
+type u16 = never /* native */
+
+
+type u8 = never /* native */
+
+
+type i64 = never /* native */
+
+
+type buffer = never /* native */
+
+
+type i32 = never /* native */
+
+
+type i8 = never /* native */
+
+
+type bool = never /* native */
+
+
+type i16 = never /* native */
+
+
+type f32 = never /* native */
+
+
+type f64 = never /* native */
+
+
+type UUID = never /* native */
+
+
+type bitfield = never /* native */
+
+
+type container = never /* native */
+
+
+type array = never /* native */
+
+
+type restBuffer = never /* native */
+
+
+type nbt = never /* native */
+
+
+type optionalNbt = never /* native */
+
+
+type slot = {
+                blockId: i16, _anon_0: {
+                    "-1": Void; _: {
+                itemCount: i8, itemDamage: i16, nbtData: OptionalNbt } } /* .get(blockId) */ }
+
+
+type position = BitField<{ fields: [{
+                        name: "x", size: 26, signed: true }, {
+                        name: "y", size: 12, signed: true }, {
+                        name: "z", size: 26, signed: true }] }>
+
+
+type entityMetadataItem = {
+                    "0": i8 ;"1": VarInt ;"2": f32 ;"3": String_ ;"4": String_ ;"5": Slot ;"6": bool ;"7": {
+                pitch: f32, yaw: f32, roll: f32 } ;"8": position ;"9": option<position> ;"10": VarInt ;"11": option<UUID> ;"12": VarInt; _: Void } /* .get($compareTo) */
+
+
+type entityMetadata = entityMetadataLoop<{ ty: {
+                _anon_1: {
+                key: u8, type: i8 }, value: entityMetadataItem<{ compareTo: "type" }> }, endVal: 255 }>
+
+namespace handshaking.to_client {
+
+interface packet {
+	name: /* empty mapper */ any,
+	params: /* empty switch */ any,
+}
+
+}
+namespace handshaking.to_server {
+
+interface packet_set_protocol {
+	protocolVersion: VarInt,
+	serverHost: String_,
+	serverPort: u16,
+	nextState: VarInt,
+}
+
+
+interface packet_legacy_server_list_ping {
+	payload: u8,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "set_protocol"; 0xfe: "legacy_server_list_ping"; _ : Void; }[] /* mapper */,
+	params: {
+                    "set_protocol": packet_set_protocol ;"legacy_server_list_ping": packet_legacy_server_list_ping; _: Void } /* .get(name) */,
+}
+
+}
+namespace status.to_client {
+
+interface packet_server_info {
+	response: String_,
+}
+
+
+interface packet_ping {
+	time: i64,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "server_info"; 0x01: "ping"; _ : Void; }[] /* mapper */,
+	params: {
+                    "server_info": packet_server_info ;"ping": packet_ping; _: Void } /* .get(name) */,
+}
+
+}
+namespace status.to_server {
+
+interface packet_ping_start {
+
+}
+
+
+interface packet_ping {
+	time: i64,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "ping_start"; 0x01: "ping"; _ : Void; }[] /* mapper */,
+	params: {
+                    "ping_start": packet_ping_start ;"ping": packet_ping; _: Void } /* .get(name) */,
+}
+
+}
+namespace login.to_client {
+
+interface packet_disconnect {
+	reason: String_,
+}
+
+
+interface packet_encryption_begin {
+	serverId: String_,
+	publicKey: Buffer<{ countType: VarInt }>,
+	verifyToken: Buffer<{ countType: VarInt }>,
+}
+
+
+interface packet_success {
+	uuid: String_,
+	username: String_,
+}
+
+
+interface packet_compress {
+	threshold: VarInt,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "disconnect"; 0x01: "encryption_begin"; 0x02: "success"; 0x03: "compress"; _ : Void; }[] /* mapper */,
+	params: {
+                    "disconnect": packet_disconnect ;"encryption_begin": packet_encryption_begin ;"success": packet_success ;"compress": packet_compress; _: Void } /* .get(name) */,
+}
+
+}
+namespace login.to_server {
+
+interface packet_login_start {
+	username: String_,
+}
+
+
+interface packet_encryption_begin {
+	sharedSecret: Buffer<{ countType: VarInt }>,
+	verifyToken: Buffer<{ countType: VarInt }>,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "login_start"; 0x01: "encryption_begin"; _ : Void; }[] /* mapper */,
+	params: {
+                    "login_start": packet_login_start ;"encryption_begin": packet_encryption_begin; _: Void } /* .get(name) */,
+}
+
+}
+namespace play.to_client {
+
+interface packet_spawn_entity {
+	entityId: VarInt,
+	objectUUID: UUID,
+	type: i8,
+	x: f64,
+	y: f64,
+	z: f64,
+	pitch: i8,
+	yaw: i8,
+	objectData: i32,
+	velocityX: i16,
+	velocityY: i16,
+	velocityZ: i16,
+}
+
+
+interface packet_spawn_entity_experience_orb {
+	entityId: VarInt,
+	x: f64,
+	y: f64,
+	z: f64,
+	count: i16,
+}
+
+
+interface packet_spawn_entity_weather {
+	entityId: VarInt,
+	type: i8,
+	x: f64,
+	y: f64,
+	z: f64,
+}
+
+
+interface packet_spawn_entity_living {
+	entityId: VarInt,
+	entityUUID: UUID,
+	type: u8,
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: i8,
+	pitch: i8,
+	headPitch: i8,
+	velocityX: i16,
+	velocityY: i16,
+	velocityZ: i16,
+	metadata: entityMetadata,
+}
+
+
+interface packet_spawn_entity_painting {
+	entityId: VarInt,
+	entityUUID: UUID,
+	title: String_,
+	location: position,
+	direction: u8,
+}
+
+
+interface packet_named_entity_spawn {
+	entityId: VarInt,
+	playerUUID: UUID,
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: i8,
+	pitch: i8,
+	metadata: entityMetadata,
+}
+
+
+interface packet_animation {
+	entityId: VarInt,
+	animation: u8,
+}
+
+
+interface packet_statistics {
+	entries: {
+                name: String_, value: VarInt }[],
+}
+
+
+interface packet_block_break_animation {
+	entityId: VarInt,
+	location: position,
+	destroyStage: i8,
+}
+
+
+interface packet_tile_entity_data {
+	location: position,
+	action: u8,
+	nbtData: OptionalNbt,
+}
+
+
+interface packet_block_action {
+	location: position,
+	byte1: u8,
+	byte2: u8,
+	blockId: VarInt,
+}
+
+
+interface packet_block_change {
+	location: position,
+	type: VarInt,
+}
+
+
+interface packet_boss_bar {
+	entityUUID: UUID,
+	action: VarInt,
+	title: {
+                    "0": String_ ;"3": String_; _: Void } /* .get(action) */,
+	health: {
+                    "0": f32 ;"2": f32; _: Void } /* .get(action) */,
+	color: {
+                    "0": VarInt ;"4": VarInt; _: Void } /* .get(action) */,
+	dividers: {
+                    "0": VarInt ;"4": VarInt; _: Void } /* .get(action) */,
+	flags: {
+                    "0": u8 ;"5": u8; _: Void } /* .get(action) */,
+}
+
+
+interface packet_difficulty {
+	difficulty: u8,
+}
+
+
+interface packet_tab_complete {
+	matches: String_[],
+}
+
+
+interface packet_chat {
+	message: String_,
+	position: i8,
+}
+
+
+interface packet_multi_block_change {
+	chunkX: i32,
+	chunkZ: i32,
+	records: {
+                horizontalPos: u8, y: u8, blockId: VarInt }[],
+}
+
+
+interface packet_transaction {
+	windowId: i8,
+	action: i16,
+	accepted: bool,
+}
+
+
+interface packet_close_window {
+	windowId: u8,
+}
+
+
+interface packet_open_window {
+	windowId: u8,
+	inventoryType: String_,
+	windowTitle: String_,
+	slotCount: u8,
+	entityId: {
+                    "EntityHorse": i32; _: Void } /* .get(inventoryType) */,
+}
+
+
+interface packet_window_items {
+	windowId: u8,
+	items: Slot[i16],
+}
+
+
+interface packet_craft_progress_bar {
+	windowId: u8,
+	property: i16,
+	value: i16,
+}
+
+
+interface packet_set_slot {
+	windowId: i8,
+	slot: i16,
+	item: Slot,
+}
+
+
+interface packet_set_cooldown {
+	itemID: VarInt,
+	cooldownTicks: VarInt,
+}
+
+
+interface packet_custom_payload {
+	channel: String_,
+	data: RestBuffer,
+}
+
+
+interface packet_named_sound_effect {
+	soundName: String_,
+	soundCategory: VarInt,
+	x: i32,
+	y: i32,
+	z: i32,
+	volume: f32,
+	pitch: u8,
+}
+
+
+interface packet_kick_disconnect {
+	reason: String_,
+}
+
+
+interface packet_entity_status {
+	entityId: i32,
+	entityStatus: i8,
+}
+
+
+interface packet_explosion {
+	x: f32,
+	y: f32,
+	z: f32,
+	radius: f32,
+	affectedBlockOffsets: {
+                x: i8, y: i8, z: i8 }[i32],
+	playerMotionX: f32,
+	playerMotionY: f32,
+	playerMotionZ: f32,
+}
+
+
+interface packet_unload_chunk {
+	chunkX: i32,
+	chunkZ: i32,
+}
+
+
+interface packet_game_state_change {
+	reason: u8,
+	gameMode: f32,
+}
+
+
+interface packet_keep_alive {
+	keepAliveId: VarInt,
+}
+
+
+interface packet_map_chunk {
+	x: i32,
+	z: i32,
+	groundUp: bool,
+	bitMap: VarInt,
+	chunkData: Buffer<{ countType: VarInt }>,
+}
+
+
+interface packet_world_event {
+	effectId: i32,
+	location: position,
+	data: i32,
+	global: bool,
+}
+
+
+interface packet_world_particles {
+	particleId: i32,
+	longDistance: bool,
+	x: f32,
+	y: f32,
+	z: f32,
+	offsetX: f32,
+	offsetY: f32,
+	offsetZ: f32,
+	particleData: f32,
+	particles: i32,
+	data: {
+                    "36": Arr<{ arraySize: 2, elementType: VarInt }> ;"37": Arr<{ arraySize: 1, elementType: VarInt }> ;"38": Arr<{ arraySize: 1, elementType: VarInt }>; _: Void } /* .get(particleId) */,
+}
+
+
+interface packet_login {
+	entityId: i32,
+	gameMode: u8,
+	dimension: i32,
+	difficulty: u8,
+	maxPlayers: u8,
+	levelType: String_,
+	reducedDebugInfo: bool,
+}
+
+
+interface packet_map {
+	itemDamage: VarInt,
+	scale: i8,
+	trackingPosition: bool,
+	icons: {
+                directionAndType: i8, x: i8, z: i8 }[],
+	columns: i8,
+	rows: {
+                    "0": Void; _: i8 } /* .get(columns) */,
+	x: {
+                    "0": Void; _: i8 } /* .get(columns) */,
+	y: {
+                    "0": Void; _: i8 } /* .get(columns) */,
+	data: {
+                    "0": Void; _: Buffer<{ countType: VarInt }> } /* .get(columns) */,
+}
+
+
+interface packet_rel_entity_move {
+	entityId: VarInt,
+	dX: i16,
+	dY: i16,
+	dZ: i16,
+	onGround: bool,
+}
+
+
+interface packet_entity_move_look {
+	entityId: VarInt,
+	dX: i16,
+	dY: i16,
+	dZ: i16,
+	yaw: i8,
+	pitch: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity_look {
+	entityId: VarInt,
+	yaw: i8,
+	pitch: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity {
+	entityId: VarInt,
+}
+
+
+interface packet_vehicle_move {
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: f32,
+	pitch: f32,
+}
+
+
+interface packet_open_sign_entity {
+	location: position,
+}
+
+
+interface packet_abilities {
+	flags: i8,
+	flyingSpeed: f32,
+	walkingSpeed: f32,
+}
+
+
+interface packet_combat_event {
+	event: VarInt,
+	duration: {
+                    "1": VarInt; _: Void } /* .get(event) */,
+	playerId: {
+                    "2": VarInt; _: Void } /* .get(event) */,
+	entityId: {
+                    "1": i32 ;"2": i32; _: Void } /* .get(event) */,
+	message: {
+                    "2": String_; _: Void } /* .get(event) */,
+}
+
+
+interface packet_player_info {
+	action: VarInt,
+	data: {
+                UUID: UUID, name: {
+                    "0": String_; _: Void } /* .get(../action) */, properties: {
+                    "0": {
+                name: String_, value: String_, signature: option<String_> }[]; _: Void } /* .get(../action) */, gamemode: {
+                    "0": VarInt ;"1": VarInt; _: Void } /* .get(../action) */, ping: {
+                    "0": VarInt ;"2": VarInt; _: Void } /* .get(../action) */, displayName: {
+                    "0": option<String_> ;"3": option<String_>; _: Void } /* .get(../action) */ }[],
+}
+
+
+interface packet_position {
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: f32,
+	pitch: f32,
+	flags: i8,
+	teleportId: VarInt,
+}
+
+
+interface packet_bed {
+	entityId: VarInt,
+	location: position,
+}
+
+
+interface packet_entity_destroy {
+	entityIds: VarInt[],
+}
+
+
+interface packet_remove_entity_effect {
+	entityId: VarInt,
+	effectId: i8,
+}
+
+
+interface packet_resource_pack_send {
+	url: String_,
+	hash: String_,
+}
+
+
+interface packet_respawn {
+	dimension: i32,
+	difficulty: u8,
+	gamemode: u8,
+	levelType: String_,
+}
+
+
+interface packet_entity_head_rotation {
+	entityId: VarInt,
+	headYaw: i8,
+}
+
+
+interface packet_world_border {
+	action: VarInt,
+	radius: {
+                    "0": f64; _: Void } /* .get(action) */,
+	x: {
+                    "2": f64 ;"3": f64; _: Void } /* .get(action) */,
+	z: {
+                    "2": f64 ;"3": f64; _: Void } /* .get(action) */,
+	old_radius: {
+                    "1": f64 ;"3": f64; _: Void } /* .get(action) */,
+	new_radius: {
+                    "1": f64 ;"3": f64; _: Void } /* .get(action) */,
+	speed: {
+                    "1": varlong ;"3": varlong; _: Void } /* .get(action) */,
+	portalBoundary: {
+                    "3": VarInt; _: Void } /* .get(action) */,
+	warning_time: {
+                    "3": VarInt ;"4": VarInt; _: Void } /* .get(action) */,
+	warning_blocks: {
+                    "3": VarInt ;"5": VarInt; _: Void } /* .get(action) */,
+}
+
+
+interface packet_camera {
+	cameraId: VarInt,
+}
+
+
+interface packet_held_item_slot {
+	slot: i8,
+}
+
+
+interface packet_scoreboard_display_objective {
+	position: i8,
+	name: String_,
+}
+
+
+interface packet_entity_metadata {
+	entityId: VarInt,
+	metadata: entityMetadata,
+}
+
+
+interface packet_attach_entity {
+	entityId: i32,
+	vehicleId: i32,
+}
+
+
+interface packet_entity_velocity {
+	entityId: VarInt,
+	velocityX: i16,
+	velocityY: i16,
+	velocityZ: i16,
+}
+
+
+interface packet_entity_equipment {
+	entityId: VarInt,
+	slot: VarInt,
+	item: Slot,
+}
+
+
+interface packet_experience {
+	experienceBar: f32,
+	level: VarInt,
+	totalExperience: VarInt,
+}
+
+
+interface packet_update_health {
+	health: f32,
+	food: VarInt,
+	foodSaturation: f32,
+}
+
+
+interface packet_scoreboard_objective {
+	name: String_,
+	action: i8,
+	displayText: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(action) */,
+	type: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(action) */,
+}
+
+
+interface packet_set_passengers {
+	entityId: VarInt,
+	passengers: VarInt[],
+}
+
+
+interface packet_teams {
+	team: String_,
+	mode: i8,
+	name: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	prefix: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	suffix: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	friendlyFire: {
+                    "0": i8 ;"2": i8; _: Void } /* .get(mode) */,
+	nameTagVisibility: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	collisionRule: {
+                    "0": String_ ;"2": String_; _: Void } /* .get(mode) */,
+	color: {
+                    "0": i8 ;"2": i8; _: Void } /* .get(mode) */,
+	players: {
+                    "0": String_[] ;"3": String_[] ;"4": String_[]; _: Void } /* .get(mode) */,
+}
+
+
+interface packet_scoreboard_score {
+	itemName: String_,
+	action: VarInt,
+	scoreName: String_,
+	value: {
+                    "1": Void; _: VarInt } /* .get(action) */,
+}
+
+
+interface packet_spawn_position {
+	location: position,
+}
+
+
+interface packet_update_time {
+	age: i64,
+	time: i64,
+}
+
+
+interface packet_title {
+	action: VarInt,
+	text: {
+                    "0": String_ ;"1": String_; _: Void } /* .get(action) */,
+	fadeIn: {
+                    "2": i32; _: Void } /* .get(action) */,
+	stay: {
+                    "2": i32; _: Void } /* .get(action) */,
+	fadeOut: {
+                    "2": i32; _: Void } /* .get(action) */,
+}
+
+
+interface packet_update_sign {
+	location: position,
+	text1: String_,
+	text2: String_,
+	text3: String_,
+	text4: String_,
+}
+
+
+interface packet_sound_effect {
+	soundId: VarInt,
+	soundCategory: VarInt,
+	x: i32,
+	y: i32,
+	z: i32,
+	volume: f32,
+	pitch: u8,
+}
+
+
+interface packet_playerlist_header {
+	header: String_,
+	footer: String_,
+}
+
+
+interface packet_collect {
+	collectedEntityId: VarInt,
+	collectorEntityId: VarInt,
+}
+
+
+interface packet_entity_teleport {
+	entityId: VarInt,
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: i8,
+	pitch: i8,
+	onGround: bool,
+}
+
+
+interface packet_entity_update_attributes {
+	entityId: VarInt,
+	properties: {
+                key: String_, value: f64, modifiers: {
+                uuid: UUID, amount: f64, operation: i8 }[] }[i32],
+}
+
+
+interface packet_entity_effect {
+	entityId: VarInt,
+	effectId: i8,
+	amplifier: i8,
+	duration: VarInt,
+	hideParticles: i8,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "spawn_entity"; 0x01: "spawn_entity_experience_orb"; 0x02: "spawn_entity_weather"; 0x03: "spawn_entity_living"; 0x04: "spawn_entity_painting"; 0x05: "named_entity_spawn"; 0x06: "animation"; 0x07: "statistics"; 0x08: "block_break_animation"; 0x09: "tile_entity_data"; 0x0a: "block_action"; 0x0b: "block_change"; 0x0c: "boss_bar"; 0x0d: "difficulty"; 0x0e: "tab_complete"; 0x0f: "chat"; 0x10: "multi_block_change"; 0x11: "transaction"; 0x12: "close_window"; 0x13: "open_window"; 0x14: "window_items"; 0x15: "craft_progress_bar"; 0x16: "set_slot"; 0x17: "set_cooldown"; 0x18: "custom_payload"; 0x19: "named_sound_effect"; 0x1a: "kick_disconnect"; 0x1b: "entity_status"; 0x1c: "explosion"; 0x1d: "unload_chunk"; 0x1e: "game_state_change"; 0x1f: "keep_alive"; 0x20: "map_chunk"; 0x21: "world_event"; 0x22: "world_particles"; 0x23: "login"; 0x24: "map"; 0x25: "rel_entity_move"; 0x26: "entity_move_look"; 0x27: "entity_look"; 0x28: "entity"; 0x29: "vehicle_move"; 0x2a: "open_sign_entity"; 0x2b: "abilities"; 0x2c: "combat_event"; 0x2d: "player_info"; 0x2e: "position"; 0x2f: "bed"; 0x30: "entity_destroy"; 0x31: "remove_entity_effect"; 0x32: "resource_pack_send"; 0x33: "respawn"; 0x34: "entity_head_rotation"; 0x35: "world_border"; 0x36: "camera"; 0x37: "held_item_slot"; 0x38: "scoreboard_display_objective"; 0x39: "entity_metadata"; 0x3a: "attach_entity"; 0x3b: "entity_velocity"; 0x3c: "entity_equipment"; 0x3d: "experience"; 0x3e: "update_health"; 0x3f: "scoreboard_objective"; 0x40: "set_passengers"; 0x41: "teams"; 0x42: "scoreboard_score"; 0x43: "spawn_position"; 0x44: "update_time"; 0x45: "title"; 0x46: "update_sign"; 0x47: "sound_effect"; 0x48: "playerlist_header"; 0x49: "collect"; 0x4a: "entity_teleport"; 0x4b: "entity_update_attributes"; 0x4c: "entity_effect"; _ : Void; }[] /* mapper */,
+	params: {
+                    "spawn_entity": packet_spawn_entity ;"spawn_entity_experience_orb": packet_spawn_entity_experience_orb ;"spawn_entity_weather": packet_spawn_entity_weather ;"spawn_entity_living": packet_spawn_entity_living ;"spawn_entity_painting": packet_spawn_entity_painting ;"named_entity_spawn": packet_named_entity_spawn ;"animation": packet_animation ;"statistics": packet_statistics ;"block_break_animation": packet_block_break_animation ;"tile_entity_data": packet_tile_entity_data ;"block_action": packet_block_action ;"block_change": packet_block_change ;"boss_bar": packet_boss_bar ;"difficulty": packet_difficulty ;"tab_complete": packet_tab_complete ;"chat": packet_chat ;"multi_block_change": packet_multi_block_change ;"transaction": packet_transaction ;"close_window": packet_close_window ;"open_window": packet_open_window ;"window_items": packet_window_items ;"craft_progress_bar": packet_craft_progress_bar ;"set_slot": packet_set_slot ;"set_cooldown": packet_set_cooldown ;"custom_payload": packet_custom_payload ;"named_sound_effect": packet_named_sound_effect ;"kick_disconnect": packet_kick_disconnect ;"entity_status": packet_entity_status ;"explosion": packet_explosion ;"unload_chunk": packet_unload_chunk ;"game_state_change": packet_game_state_change ;"keep_alive": packet_keep_alive ;"map_chunk": packet_map_chunk ;"world_event": packet_world_event ;"world_particles": packet_world_particles ;"login": packet_login ;"map": packet_map ;"rel_entity_move": packet_rel_entity_move ;"entity_move_look": packet_entity_move_look ;"entity_look": packet_entity_look ;"entity": packet_entity ;"vehicle_move": packet_vehicle_move ;"open_sign_entity": packet_open_sign_entity ;"abilities": packet_abilities ;"combat_event": packet_combat_event ;"player_info": packet_player_info ;"position": packet_position ;"bed": packet_bed ;"entity_destroy": packet_entity_destroy ;"remove_entity_effect": packet_remove_entity_effect ;"resource_pack_send": packet_resource_pack_send ;"respawn": packet_respawn ;"entity_update_attributes": packet_entity_update_attributes ;"world_border": packet_world_border ;"camera": packet_camera ;"held_item_slot": packet_held_item_slot ;"scoreboard_display_objective": packet_scoreboard_display_objective ;"entity_metadata": packet_entity_metadata ;"attach_entity": packet_attach_entity ;"entity_velocity": packet_entity_velocity ;"entity_equipment": packet_entity_equipment ;"experience": packet_experience ;"update_health": packet_update_health ;"scoreboard_objective": packet_scoreboard_objective ;"set_passengers": packet_set_passengers ;"teams": packet_teams ;"scoreboard_score": packet_scoreboard_score ;"spawn_position": packet_spawn_position ;"update_time": packet_update_time ;"title": packet_title ;"update_sign": packet_update_sign ;"sound_effect": packet_sound_effect ;"playerlist_header": packet_playerlist_header ;"collect": packet_collect ;"entity_teleport": packet_entity_teleport ;"entity_head_rotation": packet_entity_head_rotation ;"entity_effect": packet_entity_effect; _: Void } /* .get(name) */,
+}
+
+}
+namespace play.to_server {
+
+interface packet_teleport_confirm {
+	teleportId: VarInt,
+}
+
+
+interface packet_tab_complete {
+	text: String_,
+	assumeCommand: bool,
+	lookedAtBlock: option<position>,
+}
+
+
+interface packet_chat {
+	message: String_,
+}
+
+
+interface packet_client_command {
+	actionId: VarInt,
+}
+
+
+interface packet_settings {
+	locale: String_,
+	viewDistance: i8,
+	chatFlags: VarInt,
+	chatColors: bool,
+	skinParts: u8,
+	mainHand: VarInt,
+}
+
+
+interface packet_transaction {
+	windowId: i8,
+	action: i16,
+	accepted: bool,
+}
+
+
+interface packet_enchant_item {
+	windowId: i8,
+	enchantment: i8,
+}
+
+
+interface packet_window_click {
+	windowId: u8,
+	slot: i16,
+	mouseButton: i8,
+	action: i16,
+	mode: i8,
+	item: Slot,
+}
+
+
+interface packet_close_window {
+	windowId: u8,
+}
+
+
+interface packet_custom_payload {
+	channel: String_,
+	data: RestBuffer,
+}
+
+
+interface packet_use_entity {
+	target: VarInt,
+	mouse: VarInt,
+	x: {
+                    "2": f32; _: Void } /* .get(mouse) */,
+	y: {
+                    "2": f32; _: Void } /* .get(mouse) */,
+	z: {
+                    "2": f32; _: Void } /* .get(mouse) */,
+	hand: {
+                    "0": VarInt ;"2": VarInt; _: Void } /* .get(mouse) */,
+}
+
+
+interface packet_keep_alive {
+	keepAliveId: VarInt,
+}
+
+
+interface packet_position {
+	x: f64,
+	y: f64,
+	z: f64,
+	onGround: bool,
+}
+
+
+interface packet_position_look {
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: f32,
+	pitch: f32,
+	onGround: bool,
+}
+
+
+interface packet_look {
+	yaw: f32,
+	pitch: f32,
+	onGround: bool,
+}
+
+
+interface packet_flying {
+	onGround: bool,
+}
+
+
+interface packet_vehicle_move {
+	x: f64,
+	y: f64,
+	z: f64,
+	yaw: f32,
+	pitch: f32,
+}
+
+
+interface packet_steer_boat {
+	leftPaddle: bool,
+	rightPaddle: bool,
+}
+
+
+interface packet_abilities {
+	flags: i8,
+	flyingSpeed: f32,
+	walkingSpeed: f32,
+}
+
+
+interface packet_block_dig {
+	status: VarInt,
+	location: position,
+	face: i8,
+}
+
+
+interface packet_entity_action {
+	entityId: VarInt,
+	actionId: VarInt,
+	jumpBoost: VarInt,
+}
+
+
+interface packet_steer_vehicle {
+	sideways: f32,
+	forward: f32,
+	jump: u8,
+}
+
+
+interface packet_resource_pack_receive {
+	hash: String_,
+	result: VarInt,
+}
+
+
+interface packet_held_item_slot {
+	slotId: i16,
+}
+
+
+interface packet_set_creative_slot {
+	slot: i16,
+	item: Slot,
+}
+
+
+interface packet_update_sign {
+	location: position,
+	text1: String_,
+	text2: String_,
+	text3: String_,
+	text4: String_,
+}
+
+
+interface packet_arm_animation {
+	hand: VarInt,
+}
+
+
+interface packet_spectate {
+	target: UUID,
+}
+
+
+interface packet_block_place {
+	location: position,
+	direction: VarInt,
+	hand: VarInt,
+	cursorX: i8,
+	cursorY: i8,
+	cursorZ: i8,
+}
+
+
+interface packet_use_item {
+	hand: VarInt,
+}
+
+
+interface packet {
+	name: {
+                    0x00: "teleport_confirm"; 0x01: "tab_complete"; 0x02: "chat"; 0x03: "client_command"; 0x04: "settings"; 0x05: "transaction"; 0x06: "enchant_item"; 0x07: "window_click"; 0x08: "close_window"; 0x09: "custom_payload"; 0x0a: "use_entity"; 0x0b: "keep_alive"; 0x0c: "position"; 0x0d: "position_look"; 0x0e: "look"; 0x0f: "flying"; 0x10: "vehicle_move"; 0x11: "steer_boat"; 0x12: "abilities"; 0x13: "block_dig"; 0x14: "entity_action"; 0x15: "steer_vehicle"; 0x16: "resource_pack_receive"; 0x17: "held_item_slot"; 0x18: "set_creative_slot"; 0x19: "update_sign"; 0x1a: "arm_animation"; 0x1b: "spectate"; 0x1c: "block_place"; 0x1d: "use_item"; _ : Void; }[] /* mapper */,
+	params: {
+                    "teleport_confirm": packet_teleport_confirm ;"tab_complete": packet_tab_complete ;"chat": packet_chat ;"client_command": packet_client_command ;"settings": packet_settings ;"transaction": packet_transaction ;"enchant_item": packet_enchant_item ;"window_click": packet_window_click ;"close_window": packet_close_window ;"custom_payload": packet_custom_payload ;"use_entity": packet_use_entity ;"keep_alive": packet_keep_alive ;"position": packet_position ;"position_look": packet_position_look ;"look": packet_look ;"flying": packet_flying ;"vehicle_move": packet_vehicle_move ;"steer_boat": packet_steer_boat ;"abilities": packet_abilities ;"block_dig": packet_block_dig ;"entity_action": packet_entity_action ;"steer_vehicle": packet_steer_vehicle ;"resource_pack_receive": packet_resource_pack_receive ;"held_item_slot": packet_held_item_slot ;"set_creative_slot": packet_set_creative_slot ;"update_sign": packet_update_sign ;"arm_animation": packet_arm_animation ;"spectate": packet_spectate ;"block_place": packet_block_place ;"use_item": packet_use_item; _: Void } /* .get(name) */,
+}
+
+}
