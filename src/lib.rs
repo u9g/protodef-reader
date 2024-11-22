@@ -798,6 +798,7 @@ fn print_to_writer(p: Protocol, mut file: &mut impl Write) -> anyhow::Result<()>
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn json2ts(json: String) -> String {
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     let p: Protocol = serde_json::from_str(&json).unwrap();
     let mut file = Cursor::new(Vec::new());
     print_to_writer(p, &mut file).unwrap();
@@ -806,5 +807,6 @@ pub fn json2ts(json: String) -> String {
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn ts2locs(s: String) -> String {
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     oxc_find::find(s).unwrap()
 }
