@@ -1,7 +1,7 @@
 use crate::{ArrayType, BufferType, HashCountType, Ty, TypeInContainer};
 
 pub fn walk_ty(top_lvl_ty: &mut Ty, on_each_type: fn(&mut Ty)) {
-    on_each_type(top_lvl_ty);
+    // on_each_type(top_lvl_ty);
 
     match top_lvl_ty {
         Ty::Array { ty } => match ty {

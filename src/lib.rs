@@ -7,8 +7,8 @@ use walk::walk_ty;
 
 mod array_to_map_transform;
 mod de;
-pub mod protocol2types;
 pub mod oxc_find;
+pub mod protocol2types;
 mod walk;
 
 #[cfg(test)]
@@ -220,6 +220,19 @@ struct BiDirectionalPackets {
     to_client: TypeHolder,
     #[serde(rename = "toServer")]
     to_server: TypeHolder,
+}
+
+impl BiDirectionalPackets {
+    fn empty() -> Self {
+        BiDirectionalPackets {
+            to_client: TypeHolder {
+                types: LinkedHashMap::default(),
+            },
+            to_server: TypeHolder {
+                types: LinkedHashMap::default(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,12 +1,9 @@
-use mylib::{json2ts, oxc_find};
+use mylib::{json2ts, oxc_find, protocol2types::protocol2types, Protocol};
 
 fn main() -> anyhow::Result<()> {
-    std::fs::write(
-        "protocol.ts",
-        json2ts(std::fs::read_to_string("protocol.json")?),
-    )?;
+    let p: Protocol = serde_json::from_str(&std::fs::read_to_string("protocol.json")?).unwrap();
 
-    oxc_find::find(std::fs::read_to_string("protocol.ts")?)?;
+    std::fs::write("protocol.ts", protocol2types(p))?;
 
     Ok(())
 }
