@@ -222,19 +222,6 @@ struct BiDirectionalPackets {
     to_server: TypeHolder,
 }
 
-impl BiDirectionalPackets {
-    fn empty() -> Self {
-        BiDirectionalPackets {
-            to_client: TypeHolder {
-                types: LinkedHashMap::default(),
-            },
-            to_server: TypeHolder {
-                types: LinkedHashMap::default(),
-            },
-        }
-    }
-}
-
 #[derive(Debug, Deserialize)]
 struct TypeHolder {
     types: LinkedHashMap<String, Ty>,

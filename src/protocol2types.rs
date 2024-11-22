@@ -1,41 +1,75 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::{AnonymousType, BiDirectionalPackets, Protocol, Ty, TypeWithName};
 
-fn print_type_with_name(type_with_name: &TypeWithName) -> String {
-    format!(
-        "{}: {}\n",
-        type_with_name.name,
-        print_ty(&type_with_name.ty)
-    )
+fn print_type_with_name(type_with_name: &TypeWithName, ctx: &mut Context) {
+    let printed = print_ty(&type_with_name.ty, ctx);
+    if printed.len() == 0 {
+        println!("no length type: {:?}", type_with_name.ty)
+    }
+
+    ctx.add_field_type_to_container(type_with_name.name.clone(), printed);
 }
 
-fn print_anonymous_type(anonymous_type: &AnonymousType) -> String {
+fn print_anonymous_type(anonymous_type: &AnonymousType, ctx: &mut Context) {
     match &anonymous_type.ty {
-        Ty::Container { ty } => ty
-            .fields
-            .iter()
-            .map(|f| match f {
+        Ty::Container { ty } => {
+            ty.fields.iter().for_each(|f| match f {
                 crate::TypeInContainer::Named(type_with_name) => {
-                    print_type_with_name(type_with_name)
+                    print_type_with_name(type_with_name, ctx)
                 }
                 crate::TypeInContainer::Anonymous(anonymous_type) => {
-                    print_anonymous_type(anonymous_type)
+                    print_anonymous_type(anonymous_type, ctx)
                 }
-            })
-            .collect::<Vec<_>>()
-            .join("\n"),
-        Ty::Switch { switch } => switch
-            .fields
-            .iter()
-            .map(|(name, ty)| format!("{name}: {} | undefined", print_ty(ty)))
-            .collect::<Vec<_>>()
-            .join("\n"),
+            });
+        }
+        Ty::Switch { switch } => {
+            switch.fields.iter().for_each(|(_, ty)| match ty {
+                Ty::Container { .. } => {
+                    _ = print_ty(ty, ctx);
+                }
+                t => {
+                    assert!(matches!(t, Ty::Void), "{t:#?}");
+                }
+            });
+        }
+        Ty::BitField { fields } => {
+            for field in fields {
+                ctx.add_field_type_to_container(field.name.clone(), "number".to_string());
+                // ctx.add_to_container
+                //     .push_str(&format!("{}: number\n", field.name));
+            }
+        }
         x => todo!("{:?}", x),
     }
 }
 
 const ANY_TYPE: &str = "never"; // "any"
 
-fn print_ty(ty: &Ty) -> String {
+#[derive(Default)]
+struct Context {
+    utility_types: HashMap<String, String>,
+    prefix: String,
+    used_types: HashSet<String>,
+    added_utility_types: HashSet<String>,
+    // add_to_container: String,
+    current_container_fields: HashMap<String, Vec<String>>,
+}
+
+impl Context {
+    fn add_field_type_to_container(&mut self, field_name: String, field_type: String) {
+        match self.current_container_fields.entry(field_name.clone()) {
+            std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+                occupied_entry.get_mut().push(field_name);
+            }
+            std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(vec![field_type]);
+            }
+        }
+    }
+}
+
+fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
     match ty {
         Ty::U16
         | Ty::VarLong
@@ -57,18 +91,33 @@ fn print_ty(ty: &Ty) -> String {
         | Ty::ArrayWithLengthOffset
         | Ty::EntityMetadataLoop { .. }
         | Ty::NativeType
-        | Ty::NonNativeType(..)
         | Ty::Count { .. }
         | Ty::TopBitSetTerminatedArray { .. }
         | Ty::PString { .. }
         | Ty::Buffer { .. }
-        | Ty::Mapper { .. }
         | Ty::EntityMetadata => ANY_TYPE.to_string(),
+        Ty::Mapper { mapper } => {
+            if mapper.mappings.len() > 0 {
+                mapper
+                    .mappings
+                    .values()
+                    .map(|x| format!("\"{x}\""))
+                    .collect::<Vec<_>>()
+                    .join(" | ")
+            } else {
+                "never".to_string()
+            }
+        }
+        Ty::NonNativeType(s) => {
+            let type_being_used = format!("{}{}", ctx.prefix, s);
+            ctx.used_types.insert(type_being_used.clone());
+            type_being_used
+        }
         Ty::Bool => "boolean".to_string(),
         Ty::Void => "never".to_string(),
         Ty::OptionalNbt => format!("{} | undefined", ANY_TYPE),
-        Ty::RestBuffer => "Buffer".to_string(),
-        Ty::Option { ty } => format!("{} | undefined", print_ty(ty)),
+        Ty::RestBuffer => "buffer".to_string(),
+        Ty::Option { ty } => format!("({} | undefined)", print_ty(ty, ctx)),
         Ty::BitField { fields } => format!(
             "{{\n{}\n}}",
             fields
@@ -78,41 +127,64 @@ fn print_ty(ty: &Ty) -> String {
                 .join("\n")
         ),
         Ty::Switch { switch } => format!(
-            "{}",
+            "{}{}{}",
             switch
                 .fields
                 .iter()
-                .map(|(_, ty)| format!("{}", print_ty(ty)))
+                .map(|(name, ty)| format!("/* {name} */ {}", print_ty(ty, ctx)))
                 .collect::<Vec<_>>()
-                .join(" | ")
+                .join(" | "),
+            switch
+                .default
+                .as_ref()
+                .map(|x| format!("| {}", print_ty(&x, ctx)))
+                .unwrap_or_default(),
+            if switch.fields.len() == 0 && switch.default.is_none() {
+                "never"
+            } else {
+                ""
+            }
+            .to_string()
         ),
         Ty::Container { ty } => {
             if !ty.fields.is_empty() {
-                format!(
+                for field in &ty.fields {
+                    match field {
+                        crate::TypeInContainer::Named(type_with_name) => {
+                            print_type_with_name(&type_with_name, ctx)
+                        }
+                        crate::TypeInContainer::Anonymous(anonymous_type) => {
+                            print_anonymous_type(&anonymous_type, ctx)
+                        }
+                    }
+                }
+                let str = format!(
                     "{{\n{}\n}}",
-                    ty.fields
+                    ctx.current_container_fields
                         .iter()
-                        .map(|f| match f {
-                            crate::TypeInContainer::Named(type_with_name) =>
-                                print_type_with_name(type_with_name),
-                            crate::TypeInContainer::Anonymous(anonymous_type) =>
-                                print_anonymous_type(anonymous_type),
-                        })
+                        .map(|x| format!("{}: {}", x.0, x.1.join(" | ")))
                         .collect::<Vec<_>>()
                         .join("\n")
-                )
+                );
+
+                ctx.current_container_fields.clear();
+
+                str
             } else {
                 format!("Record<never, never> & {{__type: \'empty_object\'}}")
             }
         }
         Ty::Array { ty } => format!(
             "{}[]",
-            print_ty(match ty {
-                crate::ArrayType::FixedSize(fixed_array_type) => &fixed_array_type.ty,
-                crate::ArrayType::VariableSize(variable_array_type) => &variable_array_type.ty,
-                crate::ArrayType::ReferencedLength(explicit_referenced_length_type) =>
-                    &explicit_referenced_length_type.ty,
-            })
+            print_ty(
+                match ty {
+                    crate::ArrayType::FixedSize(fixed_array_type) => &fixed_array_type.ty,
+                    crate::ArrayType::VariableSize(variable_array_type) => &variable_array_type.ty,
+                    crate::ArrayType::ReferencedLength(explicit_referenced_length_type) =>
+                        &explicit_referenced_length_type.ty,
+                },
+                ctx
+            )
         ),
         Ty::Map {
             key,
@@ -123,17 +195,42 @@ fn print_ty(ty: &Ty) -> String {
 }
 
 macro_rules! process_packets {
-    ($field:ident, $p:expr, $s:ident) => {
+    ($field:ident, $p:expr, $s:ident, $ctx:expr) => {
         if let Some(BiDirectionalPackets {
             to_client,
             to_server,
         }) = $p.$field.as_ref()
         {
-            for (_, ty) in &to_client.types {
-                $s.push_str(&format!("| {}\n", print_ty(&ty)));
+            $ctx.prefix = format!("{}_{}_", stringify!($field), "toclient");
+            $ctx.added_utility_types.clear();
+            $ctx.used_types.clear();
+            for (name, ty) in &to_client.types {
+                let name_with_side = format!("{}{}", $ctx.prefix, name);
+                let ty_str = print_ty(ty, &mut $ctx);
+                $ctx.utility_types.insert(name_with_side.clone(), ty_str);
+                $ctx.added_utility_types.insert(name_with_side.clone());
+
+                $s.push_str(&format!("| {}\n", name_with_side));
             }
-            for (_, ty) in &to_server.types {
-                $s.push_str(&format!("| {}\n", print_ty(&ty)));
+            for ty in $ctx.used_types.difference(&$ctx.added_utility_types) {
+                $ctx.utility_types
+                    .insert(ty.to_string(), ty[$ctx.prefix.len()..].to_string());
+            }
+
+            $ctx.prefix = format!("{}_{}_", stringify!($field), "toserver");
+            $ctx.added_utility_types.clear();
+            $ctx.used_types.clear();
+            for (name, ty) in &to_server.types {
+                let name_with_side = format!("{}{}", $ctx.prefix, name);
+                let ty_str = print_ty(ty, &mut $ctx);
+                $ctx.utility_types.insert(name_with_side.clone(), ty_str);
+                $ctx.added_utility_types.insert(name_with_side.clone());
+
+                $s.push_str(&format!("| {}\n", name_with_side));
+            }
+            for ty in $ctx.used_types.difference(&$ctx.added_utility_types) {
+                $ctx.utility_types
+                    .insert(ty.to_string(), ty[$ctx.prefix.len()..].to_string());
             }
         }
     };
@@ -142,14 +239,36 @@ macro_rules! process_packets {
 pub fn protocol2types(p: Protocol) -> String {
     let mut s = String::new();
 
-    s.push_str("type Packet =\n");
+    let mut ctx = Context::default();
 
-    process_packets!(configuration, p, s);
-    process_packets!(handshaking, p, s);
-    process_packets!(status, p, s);
-    process_packets!(login, p, s);
-    process_packets!(configuration, p, s);
-    process_packets!(play, p, s);
+    for (name, ty) in p.types {
+        if name == "switch" || name == "void" || name == "string" {
+            continue;
+        }
+        s.push_str(&format!("type {name} = {};\n", print_ty(&ty, &mut ctx)))
+    }
+
+    s.push_str("\n");
+
+    s.push_str("type Packet =\n");
+    process_packets!(handshaking, p, s, ctx);
+    process_packets!(status, p, s, ctx);
+    process_packets!(login, p, s, ctx);
+    process_packets!(configuration, p, s, ctx);
+    process_packets!(play, p, s, ctx);
+
+    s.push_str("\n");
+
+    for (name, ty) in ctx.utility_types {
+        s.push_str(&format!("type {name} = {ty};\n"))
+    }
+
+    // process_packets!(configuration, p, s, &mut ctx);
+    // process_packets!(handshaking, p, s, &mut ctx);
+    // process_packets!(status, p, s, &mut ctx);
+    // process_packets!(login, p, s, &mut ctx);
+    // process_packets!(configuration, p, s, &mut ctx);
+    // process_packets!(play, p, s, &mut ctx);
 
     s
 }
