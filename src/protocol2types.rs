@@ -98,12 +98,15 @@ fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
         | Ty::EntityMetadata => ANY_TYPE.to_string(),
         Ty::Mapper { mapper } => {
             if mapper.mappings.len() > 0 {
-                mapper
-                    .mappings
-                    .values()
-                    .map(|x| format!("\"{x}\""))
-                    .collect::<Vec<_>>()
-                    .join(" | ")
+                format!(
+                    "({})",
+                    mapper
+                        .mappings
+                        .values()
+                        .map(|x| format!("\"{x}\""))
+                        .collect::<Vec<_>>()
+                        .join(" | ")
+                )
             } else {
                 "never".to_string()
             }
@@ -147,6 +150,13 @@ fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
             .to_string()
         ),
         Ty::Container { ty } => {
+            let new_current_container_fields: HashMap<String, Vec<String>> = Default::default();
+
+            let previous_fields = std::mem::replace(
+                &mut ctx.current_container_fields,
+                new_current_container_fields,
+            );
+
             if !ty.fields.is_empty() {
                 for field in &ty.fields {
                     match field {
@@ -158,6 +168,7 @@ fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
                         }
                     }
                 }
+
                 let str = format!(
                     "{{\n{}\n}}",
                     ctx.current_container_fields
@@ -167,7 +178,7 @@ fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
                         .join("\n")
                 );
 
-                ctx.current_container_fields.clear();
+                ctx.current_container_fields = previous_fields;
 
                 str
             } else {
@@ -210,7 +221,9 @@ macro_rules! process_packets {
                 $ctx.utility_types.insert(name_with_side.clone(), ty_str);
                 $ctx.added_utility_types.insert(name_with_side.clone());
 
-                $s.push_str(&format!("| {}\n", name_with_side));
+                if (name_with_side.ends_with("_packet")) {
+                    $s.push_str(&format!("| {}\n", name_with_side));
+                }
             }
             for ty in $ctx.used_types.difference(&$ctx.added_utility_types) {
                 $ctx.utility_types
@@ -226,7 +239,9 @@ macro_rules! process_packets {
                 $ctx.utility_types.insert(name_with_side.clone(), ty_str);
                 $ctx.added_utility_types.insert(name_with_side.clone());
 
-                $s.push_str(&format!("| {}\n", name_with_side));
+                if (name_with_side.ends_with("_packet")) {
+                    $s.push_str(&format!("| {}\n", name_with_side));
+                }
             }
             for ty in $ctx.used_types.difference(&$ctx.added_utility_types) {
                 $ctx.utility_types
