@@ -7,6 +7,7 @@ use walk::walk_ty;
 
 mod array_to_map_transform;
 mod de;
+pub mod protocol2types;
 pub mod oxc_find;
 mod walk;
 
@@ -204,7 +205,7 @@ mod test {
 }
 
 #[derive(Debug, Deserialize)]
-struct Protocol {
+pub struct Protocol {
     types: LinkedHashMap<String, Ty>,
     handshaking: Option<BiDirectionalPackets>,
     status: Option<BiDirectionalPackets>,
