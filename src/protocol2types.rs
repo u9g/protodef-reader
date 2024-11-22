@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use crate::{AnonymousType, BiDirectionalPackets, Protocol, Ty, TypeWithName};
 
@@ -52,17 +52,18 @@ struct Context {
     prefix: String,
     used_types: HashSet<String>,
     added_utility_types: HashSet<String>,
-    // add_to_container: String,
     current_container_fields: HashMap<String, Vec<String>>,
+    // {play: {to_client: ["play_to_client_packet_entity_look", "entity_look"]}}
+    packet_names: HashMap<String, HashMap<String, HashSet<(String, String)>>>,
 }
 
 impl Context {
     fn add_field_type_to_container(&mut self, field_name: String, field_type: String) {
         match self.current_container_fields.entry(field_name.clone()) {
-            std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+            Entry::Occupied(mut occupied_entry) => {
                 occupied_entry.get_mut().push(field_name);
             }
-            std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+            Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(vec![field_type]);
             }
         }
@@ -73,7 +74,6 @@ fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
     match ty {
         Ty::U16
         | Ty::VarLong
-        | Ty::I64
         | Ty::F32
         | Ty::U8
         | Ty::I32
@@ -81,6 +81,7 @@ fn print_ty(ty: &Ty, ctx: &mut Context) -> String {
         | Ty::I16
         | Ty::F64
         | Ty::VarInt => "number".to_string(),
+        Ty::I64 => "[number, number]".to_string(),
         Ty::String | Ty::UUID => "string".to_string(),
         Ty::ParticleData { .. }
         | Ty::EntityMetadataItem { .. }
@@ -212,7 +213,8 @@ macro_rules! process_packets {
             to_server,
         }) = $p.$field.as_ref()
         {
-            $ctx.prefix = format!("{}_{}_", stringify!($field), "toclient");
+            let mut side = "to_client";
+            $ctx.prefix = format!("{}_{}_", stringify!($field), side);
             $ctx.added_utility_types.clear();
             $ctx.used_types.clear();
             for (name, ty) in &to_client.types {
@@ -221,8 +223,44 @@ macro_rules! process_packets {
                 $ctx.utility_types.insert(name_with_side.clone(), ty_str);
                 $ctx.added_utility_types.insert(name_with_side.clone());
 
-                if (name_with_side.ends_with("_packet")) {
+                if name_with_side.ends_with("_packet") {
                     $s.push_str(&format!("| {}\n", name_with_side));
+                }
+
+                if name.starts_with("packet_") {
+                    let x = $ctx.packet_names.entry(stringify!($field).to_string());
+                    let packet_name = name["packet_".len()..].to_string();
+                    match x {
+                        Entry::Occupied(mut occupied_entry) => {
+                            let entry = occupied_entry.get_mut();
+                            let side_entry = entry.entry(side.to_string());
+                            match side_entry {
+                                Entry::Occupied(mut occupied_entry) => {
+                                    occupied_entry
+                                        .get_mut()
+                                        .insert((name_with_side, packet_name));
+                                }
+                                Entry::Vacant(vacant_entry) => {
+                                    vacant_entry.insert({
+                                        let mut set = HashSet::default();
+                                        set.insert((name_with_side, packet_name));
+                                        set
+                                    });
+                                }
+                            }
+                        }
+                        Entry::Vacant(vacant_entry) => {
+                            vacant_entry.insert({
+                                let mut map = HashMap::new();
+                                map.insert(side.to_string(), {
+                                    let mut set = HashSet::default();
+                                    set.insert((name_with_side, packet_name));
+                                    set
+                                });
+                                map
+                            });
+                        }
+                    }
                 }
             }
             for ty in $ctx.used_types.difference(&$ctx.added_utility_types) {
@@ -230,7 +268,8 @@ macro_rules! process_packets {
                     .insert(ty.to_string(), ty[$ctx.prefix.len()..].to_string());
             }
 
-            $ctx.prefix = format!("{}_{}_", stringify!($field), "toserver");
+            side = "to_server";
+            $ctx.prefix = format!("{}_{}_", stringify!($field), side);
             $ctx.added_utility_types.clear();
             $ctx.used_types.clear();
             for (name, ty) in &to_server.types {
@@ -239,8 +278,44 @@ macro_rules! process_packets {
                 $ctx.utility_types.insert(name_with_side.clone(), ty_str);
                 $ctx.added_utility_types.insert(name_with_side.clone());
 
-                if (name_with_side.ends_with("_packet")) {
+                if name_with_side.ends_with("_packet") {
                     $s.push_str(&format!("| {}\n", name_with_side));
+                }
+
+                if name.starts_with("packet_") {
+                    let x = $ctx.packet_names.entry(stringify!($field).to_string());
+                    let packet_name = name["packet_".len()..].to_string();
+                    match x {
+                        Entry::Occupied(mut occupied_entry) => {
+                            let entry = occupied_entry.get_mut();
+                            let side_entry = entry.entry(side.to_string());
+                            match side_entry {
+                                Entry::Occupied(mut occupied_entry) => {
+                                    occupied_entry
+                                        .get_mut()
+                                        .insert((name_with_side, packet_name));
+                                }
+                                Entry::Vacant(vacant_entry) => {
+                                    vacant_entry.insert({
+                                        let mut set = HashSet::default();
+                                        set.insert((name_with_side, packet_name));
+                                        set
+                                    });
+                                }
+                            }
+                        }
+                        Entry::Vacant(vacant_entry) => {
+                            vacant_entry.insert({
+                                let mut map = HashMap::new();
+                                map.insert(side.to_string(), {
+                                    let mut set = HashSet::default();
+                                    set.insert((name_with_side, packet_name));
+                                    set
+                                });
+                                map
+                            });
+                        }
+                    }
                 }
             }
             for ty in $ctx.used_types.difference(&$ctx.added_utility_types) {
@@ -266,6 +341,7 @@ pub fn protocol2types(p: Protocol) -> String {
     s.push_str("\n");
 
     s.push_str("type Packet =\n");
+
     process_packets!(handshaking, p, s, ctx);
     process_packets!(status, p, s, ctx);
     process_packets!(login, p, s, ctx);
@@ -277,6 +353,22 @@ pub fn protocol2types(p: Protocol) -> String {
     for (name, ty) in ctx.utility_types {
         s.push_str(&format!("type {name} = {ty};\n"))
     }
+
+    s.push_str("\n");
+    s.push_str("interface PacketWithDir {");
+    for (k, v) in ctx.packet_names {
+        s.push_str(&format!("{k}: {{\n"));
+        for (k, v) in v {
+            s.push_str(&format!("{k}: {{"));
+            for (name_with_side, name) in v {
+                s.push_str(&format!("{name}: {name_with_side}\n"))
+            }
+            s.push_str("}\n");
+        }
+        s.push_str("}\n");
+    }
+    s.push_str("}");
+    s.push_str("\n");
 
     // process_packets!(configuration, p, s, &mut ctx);
     // process_packets!(handshaking, p, s, &mut ctx);
